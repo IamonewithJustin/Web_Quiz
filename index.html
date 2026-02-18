@@ -147,6 +147,9 @@ let firebaseStateRef = null;
 let firebaseResultsRef = null;
 let firebaseStateUnsub = null;
 let firebaseResultsUnsub = null;
+let landingPresenterStateUnsub = null;
+let landingPresenterPollTimer = null;
+let landingPresenterSnapshot = {};
 let realtimeTransport = 'offline';
 let sharedStateObserverUnsub = null;
 let presenterToken = '';
@@ -441,6 +444,40 @@ function destroyRealtime(){
   firebaseResultsRef = null;
   sharedState = null;
   realtimeTransport = 'offline';
+}
+function stopLandingPresenterWatch(){
+  if(landingPresenterStateUnsub){
+    landingPresenterStateUnsub();
+    landingPresenterStateUnsub = null;
+  }
+  if(landingPresenterPollTimer){
+    clearInterval(landingPresenterPollTimer);
+    landingPresenterPollTimer = null;
+  }
+  landingPresenterSnapshot = {};
+}
+function applyLandingPresenterAvailability(){
+  const modeIn = document.getElementById('modeIn');
+  if(!modeIn) return;
+  const presenterOption = modeIn.querySelector('option[value="presenter"]');
+  if(!presenterOption) return;
+  const heartbeat = landingPresenterSnapshot.presenterHeartbeat || 0;
+  const active = !!landingPresenterSnapshot.presenterToken && (Date.now() - heartbeat) < 10000;
+  presenterOption.disabled = active;
+  presenterOption.textContent = active
+    ? 'Presenter (controls everyone) — unavailable'
+    : 'Presenter (controls everyone)';
+  if(active && modeIn.value === 'presenter') modeIn.value = 'participant';
+}
+async function startLandingPresenterWatch(){
+  stopLandingPresenterWatch();
+  if(!(await loadRealtimeLibs())) return;
+  const stateRef = firebaseFns.ref(firebaseDb, `sessions/${PUBLIC_ROOM_ID}/state`);
+  landingPresenterStateUnsub = firebaseFns.onValue(stateRef, snap => {
+    landingPresenterSnapshot = snap.val() || {};
+    applyLandingPresenterAvailability();
+  });
+  landingPresenterPollTimer = setInterval(applyLandingPresenterAvailability, 1000);
 }
 function createFirebaseSharedState(){
   const stateData = {};
@@ -794,6 +831,7 @@ function renderLanding(){
         <button onclick="startQuiz()">Start quiz</button>
       </div>
     </div>`;
+  startLandingPresenterWatch().catch(e => console.error('Landing presenter watch failed:', e));
   updateHeader();
 }
 function renderAbout(){
@@ -1076,6 +1114,7 @@ function retake(){
   updateHeader();
 }
 async function startQuiz(){
+  stopLandingPresenterWatch();
   const n = document.getElementById('nameIn').value.trim();
   const selectedMode = document.getElementById('modeIn').value;
   if(!n){ alert('Please enter your Name or Alias to continue.'); return; }

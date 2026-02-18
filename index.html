@@ -654,6 +654,10 @@ async function initRealtime(){
     }
     sharedState.set('presenterName', nameVal);
     sharedState.set('presenterHeartbeat', Date.now());
+    if(firebaseFns && firebaseResultsRef){
+      await firebaseFns.remove(firebaseResultsRef).catch(e => console.error('Firebase reset error:', e));
+      sharedState.replaceResults({});
+    }
     if(firebaseFns && firebaseStateRef){
       const updates = { phase, ended: false, current, updatedAt: Date.now() };
       await firebaseFns.update(firebaseStateRef, updates).catch(e => console.error('Firebase update error:', e));

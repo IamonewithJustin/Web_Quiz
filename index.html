@@ -304,6 +304,35 @@ function restoreSessionState(){
     return false;
   }
 }
+async function resumeRealtimeAfterRestore(){
+  if(sessionMode !== 'participant' || !nameVal) return;
+  const restoredPhase = phase;
+  const restoredCurrent = current;
+  const ok = await initRealtime();
+  realtimeEnabled = ok;
+  if(!ok || !sharedState) return;
+
+  lastRemoteCurrent = -1;
+  lastRemoteEnded = sharedState.get('ended') === true;
+  lastRemotePhase = '';
+
+  if(hasActivePresenter()){
+    applyParticipantState();
+    return;
+  }
+
+  if(restoredPhase === PHASE_ROUND1_STANDINGS){
+    renderRound1Standings();
+    return;
+  }
+  if(restoredPhase === PHASE_FINAL){
+    renderEnd();
+    return;
+  }
+  if(restoredCurrent >= 0 && restoredCurrent < total){
+    renderQuestion(restoredCurrent);
+  }
+}
 
 /*** ====== HELPERS ====== ***/
 function modeText(){
@@ -993,7 +1022,7 @@ async function startQuiz(){
 /* init */
 renderLanding(); updateHeader();
 if(restoreSessionState()){
-  realtimeEnabled = false;
+  resumeRealtimeAfterRestore().catch(e => console.error('Realtime restore failed:', e));
 }
 </script>
 </body>

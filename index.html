@@ -661,7 +661,7 @@ function startRound2(){
 }
 function renderQuestion(i){
   const q = ALL_QUESTIONS[i];
-  const selected = answered[i] ?? -1;
+  const selected = (answered[i] == null) ? -1 : answered[i];
   const hasSubmitted = answered[i] != null;
   const feedback = participantFeedback[i];
   const correctAnswerText = q.options[q.correct];
@@ -803,7 +803,7 @@ function renderEnd(){
               "Nice try—catch more throws next parade!";
   const summary = {
     name:nameVal, alias:aliasVal, scoreOverall: score, scoreRound1, scoreRound2, total,
-    answers: ALL_QUESTIONS.map((q,i)=>({ q:i+1, picked: answered[i] ?? null, correct: q.correct }))
+    answers: ALL_QUESTIONS.map((q,i)=>({ q:i+1, picked: (answered[i] == null) ? null : answered[i], correct: q.correct }))
   };
   const blob = encodeURIComponent(JSON.stringify(summary,null,2));
   const mailto = `mailto:${encodeURIComponent('justin.ungerer@bayer.com')}?subject=${encodeURIComponent('Mardi Gras Quiz Results - '+nameVal)}&body=${blob}`;
@@ -835,7 +835,7 @@ function renderEnd(){
 function copyResults(){
   const summary = {
     name:nameVal, alias:aliasVal, scoreOverall: score, scoreRound1, scoreRound2, total,
-    answers: ALL_QUESTIONS.map((q,i)=>({ q:i+1, picked: answered[i] ?? null, correct: q.correct }))
+    answers: ALL_QUESTIONS.map((q,i)=>({ q:i+1, picked: (answered[i] == null) ? null : answered[i], correct: q.correct }))
   };
   const text = JSON.stringify(summary,null,2);
   navigator.clipboard.writeText(text).then(()=>alert("Results copied. Paste into the organizer's form."),

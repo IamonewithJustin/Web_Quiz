@@ -6,7 +6,7 @@
 <title>unOfficial MT Hub Quiz App - Marti Gras</title>
 <style>
   :root{--purple:#6a1b9a;--green:#2e7d32;--gold:#c0a000;--ink:#1b1b1b;--bg:#fffdf7;--muted:#f3efe2}
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;overscroll-behavior-y:contain}
   .wrap{max-width:760px;margin:0 auto;padding:20px 16px 56px}
   header{display:flex;align-items:center;gap:12px;margin-bottom:8px}
   .mask{width:40px;height:40px;border-radius:8px;background:
@@ -157,6 +157,7 @@ let lastRemoteCurrent = -1;
 let lastRemoteEnded = false;
 let lastRemotePhase = '';
 let realtimeEnabled = true;
+const SESSION_STORAGE_KEY = 'mardi-gras-quiz-session-v1';
 const PUBLIC_ROOM_ID = 'mardi-gras-public-session';
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBoaFArhEidJBLEEUFGqe3a0X3jOc-7UZQ",
@@ -245,6 +246,64 @@ const screen = document.getElementById('screen');
 const bar = document.getElementById('bar');
 const tagQ = document.getElementById('tagQ');
 const tagScore = document.getElementById('tagScore');
+
+function saveSessionState(){
+  try{
+    const payload = {
+      nameVal,
+      aliasVal,
+      sessionMode,
+      phase,
+      current,
+      score,
+      scoreRound1,
+      scoreRound2,
+      answered,
+      participantFeedback,
+      participantId,
+      savedAt: Date.now()
+    };
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(payload));
+  }catch(e){}
+}
+function clearSessionState(){
+  try{ sessionStorage.removeItem(SESSION_STORAGE_KEY); }catch(e){}
+}
+function restoreSessionState(){
+  try{
+    const raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if(!raw) return false;
+    const state = JSON.parse(raw);
+    if(!state || typeof state !== 'object') return false;
+    if(!state.nameVal || typeof state.nameVal !== 'string') return false;
+
+    nameVal = state.nameVal;
+    aliasVal = typeof state.aliasVal === 'string' ? state.aliasVal : '';
+    sessionMode = state.sessionMode === 'presenter' ? 'presenter' : 'participant';
+    phase = typeof state.phase === 'string' ? state.phase : PHASE_ROUND1;
+    current = typeof state.current === 'number' ? state.current : 0;
+    score = typeof state.score === 'number' ? state.score : 0;
+    scoreRound1 = typeof state.scoreRound1 === 'number' ? state.scoreRound1 : 0;
+    scoreRound2 = typeof state.scoreRound2 === 'number' ? state.scoreRound2 : 0;
+    answered = Array.isArray(state.answered) ? state.answered : [];
+    participantFeedback = state.participantFeedback && typeof state.participantFeedback === 'object' ? state.participantFeedback : {};
+    participantId = (typeof state.participantId === 'string' && state.participantId) ? state.participantId : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    if(phase === PHASE_ROUND1_STANDINGS){
+      renderRound1Standings();
+      return true;
+    }
+    if(phase === PHASE_FINAL){
+      renderEnd();
+      return true;
+    }
+    if(current < 0 || current >= total) current = 0;
+    renderQuestion(current);
+    return true;
+  }catch(e){
+    return false;
+  }
+}
 
 /*** ====== HELPERS ====== ***/
 function modeText(){
@@ -437,6 +496,7 @@ function renderTalliesHtml(kind = 'overall'){
 }
 function applyParticipantState(){
   if(sessionMode !== 'participant' || !sharedState) return;
+  if(!hasActivePresenter()) return;
   const remotePhase = sharedState.get('phase') || PHASE_ROUND1;
   const ended = sharedState.get('ended') === true;
   const remoteCurrent = sharedState.get('current');
@@ -639,6 +699,7 @@ function renderRound1Standings(){
   phase = PHASE_ROUND1_STANDINGS;
   recalcScore();
   publishMyTally();
+  const isFollowingPresenter = realtimeEnabled && hasActivePresenter();
   screen.innerHTML = `
     <div class="center">
       ${renderBanner(ROUND1_COUNT-1)}
@@ -649,11 +710,12 @@ function renderRound1Standings(){
         ${renderTalliesHtml('round1')}
       </div>
       <div class="controls" style="justify-content:center">
-        ${(sessionMode==='presenter' || !realtimeEnabled) ? '<button onclick="startRound2()">Start Round 2</button>' : ''}
+        ${(sessionMode==='presenter' || !isFollowingPresenter) ? '<button onclick="startRound2()">Start Round 2</button>' : ''}
       </div>
-      ${sessionMode==='participant' && realtimeEnabled ? '<p class="small" style="margin-top:8px">Waiting for presenter to begin Round 2.</p>' : ''}
+      ${sessionMode==='participant' && isFollowingPresenter ? '<p class="small" style="margin-top:8px">Waiting for presenter to begin Round 2.</p>' : ''}
     </div>`;
   updateHeader();
+  saveSessionState();
 }
 function startRound2(){
   if(sessionMode !== 'presenter') return;
@@ -666,6 +728,7 @@ function renderQuestion(i){
   const q = ALL_QUESTIONS[i];
   const selected = (answered[i] == null) ? -1 : answered[i];
   const hasSubmitted = answered[i] != null;
+  const isFollowingPresenter = sessionMode === 'participant' && realtimeEnabled && hasActivePresenter();
   const feedback = participantFeedback[i];
   const correctAnswerText = q.options[q.correct];
   const funFactText = FUN_FACTS[i] || '';
@@ -692,7 +755,7 @@ function renderQuestion(i){
             <button class="secondary" onclick="prev()" ${i===0?'disabled':''}>Back</button>
             <button onclick="next()">${i===total-1?'Finish':'Next'}</button>
           </div>`
-        : realtimeEnabled
+        : isFollowingPresenter
           ? `<div class="controls">
               <button onclick="submitParticipantAnswer()" ${hasSubmitted?'disabled':''}>${hasSubmitted?'Submitted':'Submit'}</button>
             </div>
@@ -715,6 +778,7 @@ function renderQuestion(i){
     });
   }
   updateHeader();
+  saveSessionState();
 }
 function recalcScore(){
   let r1 = 0;
@@ -757,7 +821,7 @@ function submitParticipantAnswer(){
   renderQuestion(current);
 }
 function next(){
-  if(sessionMode === 'participant' && realtimeEnabled) return;
+  if(sessionMode === 'participant' && realtimeEnabled && hasActivePresenter()) return;
   if(phase === PHASE_ROUND1){
     if(current < ROUND1_COUNT-1){
       current++;
@@ -782,7 +846,7 @@ function next(){
   }
 }
 function prev(){
-  if(sessionMode === 'participant' && realtimeEnabled) return;
+  if(sessionMode === 'participant' && realtimeEnabled && hasActivePresenter()) return;
   if(phase === PHASE_ROUND1 && current>0){
     current--;
     renderQuestion(current);
@@ -834,6 +898,7 @@ function renderEnd(){
       <div style="margin-top:12px;text-align:left"><div class="small" style="font-weight:600">Overall Standings (highest correct)</div>${renderTalliesHtml('overall')}<div class="small">This list updates automatically as participants submit answers.</div></div>
     </div>`;
   updateHeader();
+  saveSessionState();
 }
 function copyResults(){
   const summary = {
@@ -867,6 +932,7 @@ function copyResults(){
 }
 function retake(){
   destroyRealtime();
+  clearSessionState();
   sessionMode = 'participant';
   phase = PHASE_ROUND1;
   current=-1; score=0; answered=[];
@@ -916,6 +982,7 @@ async function startQuiz(){
   current = 0;
   realtimeEnabled = await initRealtime();
   renderQuestion(current);
+  saveSessionState();
   if(realtimeEnabled && sharedState){
     lastRemoteCurrent = -1;
     lastRemoteEnded = sharedState.get('ended') === true;
@@ -925,6 +992,9 @@ async function startQuiz(){
 }
 /* init */
 renderLanding(); updateHeader();
+if(restoreSessionState()){
+  realtimeEnabled = false;
+}
 </script>
 </body>
 </html>

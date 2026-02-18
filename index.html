@@ -317,7 +317,7 @@ function createFirebaseSharedState(){
         const resultId = key.slice(7);
         try{
           resultData[resultId] = typeof value === 'string' ? JSON.parse(value) : value;
-        }catch{
+        }catch(e){
           resultData[resultId] = value;
         }
         if(firebaseFns && firebaseResultsRef){
@@ -415,7 +415,7 @@ function getSharedTallies(kind = 'overall'){
   const items = [];
   sharedState.forEach((value, key)=>{
     if(typeof key === 'string' && key.startsWith('result:') && typeof value === 'string'){
-      try{ items.push(JSON.parse(value)); }catch{}
+      try{ items.push(JSON.parse(value)); }catch(e){}
     }
   });
   if(kind === 'round1') return items.sort((a,b)=> (b.rightRound1 - a.rightRound1));

@@ -401,17 +401,29 @@ function updateHeader(){
     tagQ.textContent = 'Final Standings';
   }
   bar.style.width = pct + '%';
-  const showSyncedQuestionScore = isQuestionPhase() && realtimeEnabled && !!sharedState && (sessionMode === 'presenter' || hasActivePresenter());
-  if(showSyncedQuestionScore){
-    const stats = getSyncedQuestionStats(current);
-    tagScore.style.display = 'inline-block';
-    tagScore.textContent = `Synced: ${stats.correct} correct • ${stats.incorrect} incorrect`;
-  } else if(sessionMode === 'presenter'){
+  if(sessionMode === 'presenter'){
     tagScore.style.display = 'none';
   } else {
     tagScore.style.display = 'inline-block';
     tagScore.textContent = `Score: ${scoreRound1 + scoreRound2}`;
   }
+}
+function shouldShowSyncedQuestionStats(){
+  return sessionMode === 'participant' && isQuestionPhase() && realtimeEnabled && !!sharedState && hasActivePresenter();
+}
+function syncedQuestionStatsLabel(index){
+  const stats = getSyncedQuestionStats(index);
+  return `Synced users — Correct: ${stats.correct} • Incorrect: ${stats.incorrect}`;
+}
+function updateSyncedQuestionStatsUI(){
+  const el = document.getElementById('syncedQuestionStats');
+  if(!el) return;
+  if(!shouldShowSyncedQuestionStats()){
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = 'block';
+  el.textContent = syncedQuestionStatsLabel(current);
 }
 function destroyRealtime(){
   if(presenterHeartbeatTimer){ clearInterval(presenterHeartbeatTimer); presenterHeartbeatTimer = null; }
@@ -732,7 +744,10 @@ async function initRealtime(){
   } else {
     sharedStateObserverUnsub = sharedState.observe(()=>{
       applyParticipantState();
-      if(isQuestionPhase()) updateHeader();
+      if(isQuestionPhase()){
+        updateHeader();
+        updateSyncedQuestionStatsUI();
+      }
     });
   }
   realtimeTransport = 'firebase';
@@ -832,6 +847,8 @@ function renderQuestion(i){
   const hasSubmitted = answered[i] != null;
   const isFollowingPresenter = sessionMode === 'participant' && realtimeEnabled && hasActivePresenter();
   const feedback = participantFeedback[i];
+  const showSyncedStats = shouldShowSyncedQuestionStats();
+  const syncedStatsText = syncedQuestionStatsLabel(i);
   const correctAnswerText = q.options[q.correct];
   const answerLabelText = feedbackAnswerLabel(i);
   const funFactText = FUN_FACTS[i] || '';
@@ -862,14 +879,18 @@ function renderQuestion(i){
         : isFollowingPresenter
           ? `<div class="controls">
               <button onclick="submitParticipantAnswer()" ${hasSubmitted?'disabled':''}>${hasSubmitted?'Submitted':'Submit'}</button>
+              <span class="small" style="align-self:center">scroll down for details</span>
             </div>
+            <div id="syncedQuestionStats" class="small" style="margin-top:6px;display:${showSyncedStats?'block':'none'}">${syncedStatsText}</div>
             ${feedback ? `<div class="feedback-banner ${feedback.isCorrect?'feedback-correct':'feedback-wrong'}"><span class="label">${feedback.isCorrect?'Correct!':'Not Quite!'}</span>${feedback.message}</div><div class="answer-fact-card small" style="line-height:1.5"><strong>${answerLabelText}:</strong> ${correctAnswerText}<br/><strong>Fun fact:</strong> ${funFactText}</div>` : ''}
             <p class="small" style="margin-top:8px">Your answer is locked in after submit. The presenter will advance everyone to the next question.</p>`
           : `<div class="controls">
               <button class="secondary" onclick="prev()" ${i===0?'disabled':''}>Back</button>
               <button onclick="submitParticipantAnswer()" ${hasSubmitted?'disabled':''}>${hasSubmitted?'Submitted':'Submit'}</button>
+              <span class="small" style="align-self:center">scroll down for details</span>
               <button onclick="next()">${i===total-1?'Finish':'Next'}</button>
             </div>
+            <div id="syncedQuestionStats" class="small" style="margin-top:6px;display:${showSyncedStats?'block':'none'}">${syncedStatsText}</div>
             ${feedback ? `<div class="feedback-banner ${feedback.isCorrect?'feedback-correct':'feedback-wrong'}"><span class="label">${feedback.isCorrect?'Correct!':'Not Quite!'}</span>${feedback.message}</div><div class="answer-fact-card small" style="line-height:1.5"><strong>${answerLabelText}:</strong> ${correctAnswerText}<br/><strong>Fun fact:</strong> ${funFactText}</div>` : ''}
             <p class="small" style="margin-top:8px">Offline mode: submit each answer, then use Next to continue.</p>`
       }
@@ -881,6 +902,7 @@ function renderQuestion(i){
       });
     });
   }
+  updateSyncedQuestionStatsUI();
   updateHeader();
   saveSessionState();
 }
@@ -1078,8 +1100,13 @@ async function startQuiz(){
   if(sessionMode === 'presenter'){
     current = 0;
     realtimeEnabled = await initRealtime();
+    if(!realtimeEnabled){
+      sessionMode = 'participant';
+      renderLanding();
+      return;
+    }
     renderQuestion(current);
-    if(realtimeEnabled) pushPresenterState(false);
+    pushPresenterState(false);
     return;
   }
 

@@ -148,8 +148,8 @@ let firebaseResultsRef = null;
 let firebaseStateUnsub = null;
 let firebaseResultsUnsub = null;
 let landingPresenterStateUnsub = null;
-let landingPresenterPollTimer = null;
 let landingPresenterSnapshot = {};
+let landingPresenterActive = null;
 let realtimeTransport = 'offline';
 let sharedStateObserverUnsub = null;
 let presenterToken = '';
@@ -450,11 +450,8 @@ function stopLandingPresenterWatch(){
     landingPresenterStateUnsub();
     landingPresenterStateUnsub = null;
   }
-  if(landingPresenterPollTimer){
-    clearInterval(landingPresenterPollTimer);
-    landingPresenterPollTimer = null;
-  }
   landingPresenterSnapshot = {};
+  landingPresenterActive = null;
 }
 function applyLandingPresenterAvailability(){
   const modeIn = document.getElementById('modeIn');
@@ -463,6 +460,8 @@ function applyLandingPresenterAvailability(){
   if(!presenterOption) return;
   const heartbeat = landingPresenterSnapshot.presenterHeartbeat || 0;
   const active = !!landingPresenterSnapshot.presenterToken && (Date.now() - heartbeat) < 10000;
+  if(landingPresenterActive === active) return;
+  landingPresenterActive = active;
   presenterOption.disabled = active;
   presenterOption.textContent = active
     ? 'Presenter (controls everyone) — unavailable'
@@ -477,7 +476,6 @@ async function startLandingPresenterWatch(){
     landingPresenterSnapshot = snap.val() || {};
     applyLandingPresenterAvailability();
   });
-  landingPresenterPollTimer = setInterval(applyLandingPresenterAvailability, 1000);
 }
 function createFirebaseSharedState(){
   const stateData = {};

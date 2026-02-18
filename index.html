@@ -366,7 +366,7 @@ function slideImageForIndex(index){
 }
 function renderBanner(index = 0){
   const src = slideImageForIndex(index);
-  return `<div class="slide-banner" style="background-image:url('${src}');background-size:auto 100%;background-repeat:no-repeat;background-position:center center;background-color:#000" aria-hidden="true"></div>`;
+  return `<div class="slide-banner" style="background-image:url('${src}');background-size:cover;background-repeat:no-repeat;background-position:center center;background-color:#000" aria-hidden="true"></div>`;
 }
 function feedbackAnswerLabel(index){
   const labels = [

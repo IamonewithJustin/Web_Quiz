@@ -401,7 +401,12 @@ function updateHeader(){
     tagQ.textContent = 'Final Standings';
   }
   bar.style.width = pct + '%';
-  if(sessionMode === 'presenter'){
+  const showSyncedQuestionScore = isQuestionPhase() && realtimeEnabled && !!sharedState && (sessionMode === 'presenter' || hasActivePresenter());
+  if(showSyncedQuestionScore){
+    const stats = getSyncedQuestionStats(current);
+    tagScore.style.display = 'inline-block';
+    tagScore.textContent = `Synced: ${stats.correct} correct • ${stats.incorrect} incorrect`;
+  } else if(sessionMode === 'presenter'){
     tagScore.style.display = 'none';
   } else {
     tagScore.style.display = 'inline-block';
@@ -520,6 +525,7 @@ function publishMyTally(){
   const payload = {
     id: participantId,
     name: nameVal,
+    answers: Array.from({ length: total }, (_, idx) => Number.isInteger(answered[idx]) ? answered[idx] : null),
     rightRound1: scoreRound1,
     rightRound2: scoreRound2,
     rightOverall: scoreRound1 + scoreRound2,
@@ -531,7 +537,7 @@ function publishMyTally(){
   };
   sharedState.set(`result:${participantId}`, JSON.stringify(payload));
 }
-function getSharedTallies(kind = 'overall'){
+function getSharedResults(){
   if(!sharedState) return [];
   const items = [];
   sharedState.forEach((value, key)=>{
@@ -539,9 +545,27 @@ function getSharedTallies(kind = 'overall'){
       try{ items.push(JSON.parse(value)); }catch(e){}
     }
   });
+  return items;
+}
+function getSharedTallies(kind = 'overall'){
+  const items = getSharedResults();
   if(kind === 'round1') return items.sort((a,b)=> (b.rightRound1 - a.rightRound1));
   if(kind === 'round2') return items.sort((a,b)=> (b.rightRound2 - a.rightRound2));
   return items.sort((a,b)=> (b.rightOverall - a.rightOverall));
+}
+function getSyncedQuestionStats(index){
+  if(index < 0 || index >= total) return { correct: 0, incorrect: 0, submitted: 0 };
+  const correctIndex = ALL_QUESTIONS[index].correct;
+  let correct = 0;
+  let incorrect = 0;
+  getSharedResults().forEach((result)=>{
+    const picks = Array.isArray(result.answers) ? result.answers : [];
+    const picked = picks[index];
+    if(typeof picked !== 'number') return;
+    if(picked === correctIndex) correct++;
+    else incorrect++;
+  });
+  return { correct, incorrect, submitted: correct + incorrect };
 }
 function renderTalliesHtml(kind = 'overall'){
   const tallies = getSharedTallies(kind);
@@ -587,6 +611,7 @@ function applyParticipantState(){
     current = remoteCurrent;
     renderQuestion(current);
   }
+  updateHeader();
 }
 function hasActivePresenter(){
   if(!sharedState) return false;
@@ -700,10 +725,15 @@ async function initRealtime(){
       if(phase === PHASE_FINAL || (sharedState.get('ended') === true && current >= total-1)){
         phase = PHASE_FINAL;
         renderEnd();
+        return;
       }
+      if(isQuestionPhase()) updateHeader();
     });
   } else {
-    sharedStateObserverUnsub = sharedState.observe(applyParticipantState);
+    sharedStateObserverUnsub = sharedState.observe(()=>{
+      applyParticipantState();
+      if(isQuestionPhase()) updateHeader();
+    });
   }
   realtimeTransport = 'firebase';
   return true;

@@ -138,11 +138,16 @@ let answered = []; // selected option indexes (absolute index across all rounds)
 let nameVal = "", aliasVal = "";
 let resultsFormUrl = ""; // optional: paste a Microsoft Form (Anyone can respond) link if you want
 let sessionMode = 'participant'; // presenter | participant
-let ydoc = null;
-let provider = null;
 let sharedState = null;
-let YLib = null;
-let WebrtcProviderCtor = null;
+let firebaseApp = null;
+let firebaseDb = null;
+let firebaseFns = null;
+let firebaseSessionRoot = null;
+let firebaseStateRef = null;
+let firebaseResultsRef = null;
+let firebaseStateUnsub = null;
+let firebaseResultsUnsub = null;
+let realtimeTransport = 'offline';
 let presenterToken = '';
 let presenterHeartbeatTimer = null;
 let participantId = '';
@@ -152,6 +157,16 @@ let lastRemoteEnded = false;
 let lastRemotePhase = '';
 let realtimeEnabled = true;
 const PUBLIC_ROOM_ID = 'mardi-gras-public-session';
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBoaFArhEidJBLEEUFGqe3a0X3jOc-7UZQ",
+  authDomain: "webquiz-26c83.firebaseapp.com",
+  databaseURL: "https://webquiz-26c83-default-rtdb.firebaseio.com",
+  projectId: "webquiz-26c83",
+  storageBucket: "webquiz-26c83.firebasestorage.app",
+  messagingSenderId: "636029354938",
+  appId: "1:636029354938:web:5b403935e21e4abe5d5383",
+  measurementId: "G-Z83N35PWKW"
+};
 
 const RIGHT_MESSAGES = [
   '🎉 Bead-tastic! You nailed it!',
@@ -233,8 +248,8 @@ const tagScore = document.getElementById('tagScore');
 /*** ====== HELPERS ====== ***/
 function modeText(){
   if(!realtimeEnabled) return 'Offline mode (local quiz only)';
-  if(sessionMode === 'presenter') return 'Presenter mode (controls progression)';
-  return 'Participant mode (follows presenter)';
+  if(sessionMode === 'presenter') return `Presenter mode (controls progression) • Sync: ${realtimeTransport}`;
+  return `Participant mode (follows presenter) • Sync: ${realtimeTransport}`;
 }
 function isQuestionPhase(){
   return phase === PHASE_ROUND1 || phase === PHASE_ROUND2;
@@ -279,9 +294,91 @@ function destroyRealtime(){
     sharedState.set('presenterHeartbeat', 0);
   }
   presenterToken = '';
-  if(provider){ provider.destroy(); provider = null; }
-  if(ydoc){ ydoc.destroy(); ydoc = null; }
+  if(firebaseStateUnsub){ firebaseStateUnsub(); firebaseStateUnsub = null; }
+  if(firebaseResultsUnsub){ firebaseResultsUnsub(); firebaseResultsUnsub = null; }
+  firebaseSessionRoot = null;
+  firebaseStateRef = null;
+  firebaseResultsRef = null;
   sharedState = null;
+  realtimeTransport = 'offline';
+}
+function createFirebaseSharedState(){
+  const stateData = {};
+  const resultData = {};
+  const observers = new Set();
+  const notify = ()=> observers.forEach(cb => { try{ cb(); }catch(err){ console.error(err); } });
+
+  return {
+    set(key, value){
+      if(typeof key !== 'string') return;
+      if(key.startsWith('result:')){
+        const resultId = key.slice(7);
+        try{
+          resultData[resultId] = typeof value === 'string' ? JSON.parse(value) : value;
+        }catch{
+          resultData[resultId] = value;
+        }
+        if(firebaseFns && firebaseResultsRef){
+          const resultRef = firebaseFns.child(firebaseResultsRef, resultId);
+          firebaseFns.set(resultRef, resultData[resultId]);
+        }
+        notify();
+        return;
+      }
+      stateData[key] = value;
+      if(firebaseFns && firebaseStateRef){
+        const keyRef = firebaseFns.child(firebaseStateRef, key);
+        firebaseFns.set(keyRef, value);
+      }
+      notify();
+    },
+    get(key){
+      if(typeof key !== 'string') return undefined;
+      if(key.startsWith('result:')){
+        const resultId = key.slice(7);
+        const value = resultData[resultId];
+        return value == null ? undefined : JSON.stringify(value);
+      }
+      return stateData[key];
+    },
+    delete(key){
+      if(typeof key !== 'string') return;
+      if(key.startsWith('result:')){
+        const resultId = key.slice(7);
+        delete resultData[resultId];
+        if(firebaseFns && firebaseResultsRef){
+          const resultRef = firebaseFns.child(firebaseResultsRef, resultId);
+          firebaseFns.remove(resultRef);
+        }
+        notify();
+        return;
+      }
+      delete stateData[key];
+      if(firebaseFns && firebaseStateRef){
+        const keyRef = firebaseFns.child(firebaseStateRef, key);
+        firebaseFns.remove(keyRef);
+      }
+      notify();
+    },
+    forEach(cb){
+      Object.entries(stateData).forEach(([k,v])=> cb(v, k));
+      Object.entries(resultData).forEach(([k,v])=> cb(JSON.stringify(v), `result:${k}`));
+    },
+    observe(cb){
+      observers.add(cb);
+      return ()=> observers.delete(cb);
+    },
+    replaceState(next){
+      Object.keys(stateData).forEach(k => delete stateData[k]);
+      Object.assign(stateData, next || {});
+      notify();
+    },
+    replaceResults(next){
+      Object.keys(resultData).forEach(k => delete resultData[k]);
+      Object.assign(resultData, next || {});
+      notify();
+    }
+  };
 }
 function pushPresenterState(isEnded = false){
   if(sessionMode !== 'presenter' || !sharedState) return;
@@ -363,24 +460,6 @@ function applyParticipantState(){
     renderQuestion(current);
   }
 }
-function pickUniqueMessage(pool, usedSet, type){
-  const available = [];
-  for(let i=0;i<pool.length;i++){
-    if(!usedSet.has(i)) available.push(i);
-  }
-  if(available.length > 0){
-    const idx = available[Math.floor(Math.random() * available.length)];
-    usedSet.add(idx);
-    return pool[idx];
-  }
-  const idx = Math.floor(Math.random() * pool.length);
-  if(type === 'right'){
-    rightEncoreCounter++;
-    return `${pool[idx]} (Encore #${rightEncoreCounter})`;
-  }
-  wrongEncoreCounter++;
-  return `${pool[idx]} (Encore #${wrongEncoreCounter})`;
-}
 function hasActivePresenter(){
   if(!sharedState) return false;
   const token = sharedState.get('presenterToken');
@@ -388,12 +467,21 @@ function hasActivePresenter(){
   return !!token && (Date.now() - heartbeat) < 30000;
 }
 async function loadRealtimeLibs(){
-  if(YLib && WebrtcProviderCtor) return true;
+  if(firebaseFns && firebaseDb) return true;
   try{
-    const yMod = await import('https://esm.sh/yjs@13.6.18');
-    const wMod = await import('https://esm.sh/y-webrtc@10.3.0');
-    YLib = yMod;
-    WebrtcProviderCtor = wMod.WebrtcProvider;
+    const appMod = await import('https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js');
+    const dbMod = await import('https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js');
+    const app = appMod.getApps().length ? appMod.getApp() : appMod.initializeApp(FIREBASE_CONFIG);
+    firebaseApp = app;
+    firebaseDb = dbMod.getDatabase(firebaseApp);
+    firebaseFns = {
+      ref: dbMod.ref,
+      child: dbMod.child,
+      set: dbMod.set,
+      get: dbMod.get,
+      onValue: dbMod.onValue,
+      remove: dbMod.remove
+    };
     return true;
   }catch(err){
     console.error(err);
@@ -404,15 +492,28 @@ async function loadRealtimeLibs(){
 async function initRealtime(){
   if(!(await loadRealtimeLibs())) return false;
   destroyRealtime();
-  ydoc = new YLib.Doc();
-  provider = new WebrtcProviderCtor(PUBLIC_ROOM_ID, ydoc);
-  sharedState = ydoc.getMap('quiz-state');
 
-  await new Promise(resolve => setTimeout(resolve, 800));
+  sharedState = createFirebaseSharedState();
+  firebaseSessionRoot = firebaseFns.ref(firebaseDb, `sessions/${PUBLIC_ROOM_ID}`);
+  firebaseStateRef = firebaseFns.child(firebaseSessionRoot, 'state');
+  firebaseResultsRef = firebaseFns.child(firebaseSessionRoot, 'results');
+
+  firebaseStateUnsub = firebaseFns.onValue(firebaseStateRef, snap => {
+    sharedState.replaceState(snap.val() || {});
+  });
+  firebaseResultsUnsub = firebaseFns.onValue(firebaseResultsRef, snap => {
+    sharedState.replaceResults(snap.val() || {});
+  });
+
+  await new Promise(resolve => setTimeout(resolve, 700));
 
   if(sessionMode === 'presenter'){
-    if(hasActivePresenter()){
+    const snap = await firebaseFns.get(firebaseStateRef);
+    const remoteState = snap.val() || {};
+    const activePresenter = !!remoteState.presenterToken && (Date.now() - (remoteState.presenterHeartbeat || 0) < 30000);
+    if(activePresenter){
       alert('A presenter is already active. Please select Participant mode.');
+      destroyRealtime();
       return false;
     }
     presenterToken = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -442,7 +543,26 @@ async function initRealtime(){
   } else {
     sharedState.observe(applyParticipantState);
   }
+  realtimeTransport = 'firebase';
   return true;
+}
+function pickUniqueMessage(pool, usedSet, type){
+  const available = [];
+  for(let i=0;i<pool.length;i++){
+    if(!usedSet.has(i)) available.push(i);
+  }
+  if(available.length > 0){
+    const idx = available[Math.floor(Math.random() * available.length)];
+    usedSet.add(idx);
+    return pool[idx];
+  }
+  const idx = Math.floor(Math.random() * pool.length);
+  if(type === 'right'){
+    rightEncoreCounter++;
+    return `${pool[idx]} (Encore #${rightEncoreCounter})`;
+  }
+  wrongEncoreCounter++;
+  return `${pool[idx]} (Encore #${wrongEncoreCounter})`;
 }
 function renderLanding(){
   screen.innerHTML = `

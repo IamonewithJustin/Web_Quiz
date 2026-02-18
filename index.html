@@ -148,6 +148,7 @@ let firebaseResultsRef = null;
 let firebaseStateUnsub = null;
 let firebaseResultsUnsub = null;
 let realtimeTransport = 'offline';
+let sharedStateObserverUnsub = null;
 let presenterToken = '';
 let presenterHeartbeatTimer = null;
 let participantId = '';
@@ -288,6 +289,7 @@ function updateHeader(){
 }
 function destroyRealtime(){
   if(presenterHeartbeatTimer){ clearInterval(presenterHeartbeatTimer); presenterHeartbeatTimer = null; }
+  if(sharedStateObserverUnsub){ sharedStateObserverUnsub(); sharedStateObserverUnsub = null; }
   if(sharedState && sessionMode === 'presenter' && presenterToken && sharedState.get('presenterToken') === presenterToken){
     sharedState.delete('presenterToken');
     sharedState.delete('presenterName');
@@ -320,7 +322,7 @@ function createFirebaseSharedState(){
         }
         if(firebaseFns && firebaseResultsRef){
           const resultRef = firebaseFns.child(firebaseResultsRef, resultId);
-          firebaseFns.set(resultRef, resultData[resultId]);
+          firebaseFns.set(resultRef, resultData[resultId]).catch(e => console.error('Firebase write error:', e));
         }
         notify();
         return;
@@ -328,7 +330,7 @@ function createFirebaseSharedState(){
       stateData[key] = value;
       if(firebaseFns && firebaseStateRef){
         const keyRef = firebaseFns.child(firebaseStateRef, key);
-        firebaseFns.set(keyRef, value);
+        firebaseFns.set(keyRef, value).catch(e => console.error('Firebase write error:', e));
       }
       notify();
     },
@@ -348,7 +350,7 @@ function createFirebaseSharedState(){
         delete resultData[resultId];
         if(firebaseFns && firebaseResultsRef){
           const resultRef = firebaseFns.child(firebaseResultsRef, resultId);
-          firebaseFns.remove(resultRef);
+          firebaseFns.remove(resultRef).catch(e => console.error('Firebase remove error:', e));
         }
         notify();
         return;
@@ -356,7 +358,7 @@ function createFirebaseSharedState(){
       delete stateData[key];
       if(firebaseFns && firebaseStateRef){
         const keyRef = firebaseFns.child(firebaseStateRef, key);
-        firebaseFns.remove(keyRef);
+        firebaseFns.remove(keyRef).catch(e => console.error('Firebase remove error:', e));
       }
       notify();
     },
@@ -382,10 +384,14 @@ function createFirebaseSharedState(){
 }
 function pushPresenterState(isEnded = false){
   if(sessionMode !== 'presenter' || !sharedState) return;
-  sharedState.set('phase', phase);
-  sharedState.set('current', current);
-  sharedState.set('ended', isEnded);
-  sharedState.set('updatedAt', Date.now());
+  if(firebaseFns && firebaseStateRef){
+    const updates = {};
+    updates['phase'] = phase;
+    updates['current'] = current;
+    updates['ended'] = isEnded;
+    updates['updatedAt'] = Date.now();
+    firebaseFns.update(firebaseStateRef, updates).catch(e => console.error('Firebase update error:', e));
+  }
 }
 function publishMyTally(){
   if(sessionMode !== 'participant' || !sharedState || !participantId || !nameVal) return;
@@ -464,7 +470,7 @@ function hasActivePresenter(){
   if(!sharedState) return false;
   const token = sharedState.get('presenterToken');
   const heartbeat = sharedState.get('presenterHeartbeat') || 0;
-  return !!token && (Date.now() - heartbeat) < 30000;
+  return !!token && (Date.now() - heartbeat) < 10000;
 }
 async function loadRealtimeLibs(){
   if(firebaseFns && firebaseDb) return true;
@@ -480,7 +486,9 @@ async function loadRealtimeLibs(){
       set: dbMod.set,
       get: dbMod.get,
       onValue: dbMod.onValue,
-      remove: dbMod.remove
+      remove: dbMod.remove,
+      update: dbMod.update,
+      runTransaction: dbMod.runTransaction
     };
     return true;
   }catch(err){
@@ -498,38 +506,57 @@ async function initRealtime(){
   firebaseStateRef = firebaseFns.child(firebaseSessionRoot, 'state');
   firebaseResultsRef = firebaseFns.child(firebaseSessionRoot, 'results');
 
-  firebaseStateUnsub = firebaseFns.onValue(firebaseStateRef, snap => {
-    sharedState.replaceState(snap.val() || {});
+  const initialSync = new Promise(resolve => {
+    let stateReady = false, resultsReady = false;
+    const check = () => { if(stateReady && resultsReady) resolve(); };
+    firebaseStateUnsub = firebaseFns.onValue(firebaseStateRef, snap => {
+      sharedState.replaceState(snap.val() || {});
+      if(!stateReady){ stateReady = true; check(); }
+    });
+    firebaseResultsUnsub = firebaseFns.onValue(firebaseResultsRef, snap => {
+      sharedState.replaceResults(snap.val() || {});
+      if(!resultsReady){ resultsReady = true; check(); }
+    });
+    setTimeout(resolve, 4000); /* safety timeout */
   });
-  firebaseResultsUnsub = firebaseFns.onValue(firebaseResultsRef, snap => {
-    sharedState.replaceResults(snap.val() || {});
-  });
-
-  await new Promise(resolve => setTimeout(resolve, 700));
+  await initialSync;
 
   if(sessionMode === 'presenter'){
-    const snap = await firebaseFns.get(firebaseStateRef);
-    const remoteState = snap.val() || {};
-    const activePresenter = !!remoteState.presenterToken && (Date.now() - (remoteState.presenterHeartbeat || 0) < 30000);
-    if(activePresenter){
-      alert('A presenter is already active. Please select Participant mode.');
+    presenterToken = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const tokenRef = firebaseFns.child(firebaseStateRef, 'presenterToken');
+    try {
+      const result = await firebaseFns.runTransaction(tokenRef, (currentToken) => {
+        const hb = sharedState.get('presenterHeartbeat') || 0;
+        if(currentToken && (Date.now() - hb) < 10000){
+          return; /* abort — another presenter is active */
+        }
+        return presenterToken;
+      });
+      if(!result.committed){
+        alert('A presenter is already active. Please select Participant mode.');
+        presenterToken = '';
+        destroyRealtime();
+        return false;
+      }
+    } catch(e){
+      console.error('Transaction failed:', e);
+      alert('Could not claim presenter slot. Try again.');
+      presenterToken = '';
       destroyRealtime();
       return false;
     }
-    presenterToken = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    sharedState.set('presenterToken', presenterToken);
     sharedState.set('presenterName', nameVal);
     sharedState.set('presenterHeartbeat', Date.now());
-    sharedState.set('phase', phase);
-    sharedState.set('ended', false);
-    sharedState.set('current', current);
-    sharedState.set('updatedAt', Date.now());
+    if(firebaseFns && firebaseStateRef){
+      const updates = { phase, ended: false, current, updatedAt: Date.now() };
+      await firebaseFns.update(firebaseStateRef, updates).catch(e => console.error('Firebase update error:', e));
+    }
     presenterHeartbeatTimer = setInterval(()=>{
       if(sharedState && sharedState.get('presenterToken') === presenterToken){
         sharedState.set('presenterHeartbeat', Date.now());
       }
     }, 5000);
-    sharedState.observe(()=>{
+    sharedStateObserverUnsub = sharedState.observe(()=>{
       if(sessionMode !== 'presenter') return;
       if(phase === PHASE_ROUND1_STANDINGS){
         renderRound1Standings();
@@ -541,7 +568,7 @@ async function initRealtime(){
       }
     });
   } else {
-    sharedState.observe(applyParticipantState);
+    sharedStateObserverUnsub = sharedState.observe(applyParticipantState);
   }
   realtimeTransport = 'firebase';
   return true;

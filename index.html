@@ -347,16 +347,16 @@ function roundTextFromIndex(index){
   return index < ROUND1_COUNT ? 'Round 1' : 'Round 2';
 }
 const SLIDE_IMAGE_OVERRIDES = [
-  'assets/slide_images/q01.png',
-  'assets/slide_images/q02.png',
   null,
-  'assets/slide_images/q04.png',
-  'assets/slide_images/q05.png',
-  'assets/slide_images/q06.png',
-  'assets/slide_images/q07.png',
-  'assets/slide_images/q08.png',
-  'assets/slide_images/q09.png',
-  'assets/slide_images/q10.png'
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null,
+  null
 ];
 function slideImageForIndex(index){
   const normalized = ((index % SLIDE_IMAGES.length) + SLIDE_IMAGES.length) % SLIDE_IMAGES.length;

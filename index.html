@@ -796,7 +796,8 @@ function renderQuestion(i){
       <div class="small" style="margin-bottom:6px;font-weight:700">${roundTextFromIndex(i)}</div>
       <div class="qtext" style="font-weight:600">${q.text}</div>
       ${sessionMode==='presenter'
-        ? `<p class="small" style="margin-top:10px">Presenter view: participants answer on their devices. Use Next/Back to control progression in this round.</p>`
+        ? `<p class="small" style="margin-top:10px">Presenter view: participants answer on their devices. Use Next/Back to control progression in this round.</p>
+           <p class="small" style="margin-top:6px"><strong>Note:</strong> Starting a presenter session clears prior standings for a fresh ranking board.</p>`
         : `<form id="form" class="choices" onsubmit="event.preventDefault()">${opts}</form>`
       }
       ${sessionMode==='presenter'

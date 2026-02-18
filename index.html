@@ -350,6 +350,21 @@ function renderBanner(index = 0){
   const src = SLIDE_IMAGES[((index % SLIDE_IMAGES.length) + SLIDE_IMAGES.length) % SLIDE_IMAGES.length];
   return `<div class="slide-banner" style="background-image:linear-gradient(rgba(0,0,0,.30),rgba(0,0,0,.30)),url('${src}')" aria-hidden="true"></div>`;
 }
+function feedbackAnswerLabel(index){
+  const labels = [
+    'False answer',
+    'Incorrect answer',
+    'Correct answer',
+    'Incorrect answer',
+    'Incorrect answer',
+    'Incorrect answer',
+    'Incorrect answer',
+    'False answer',
+    'False answer',
+    'False answer'
+  ];
+  return labels[index] || 'Correct answer';
+}
 function updateHeader(){
   const idx = Math.max(0,current+1);
   let pct = 0;
@@ -760,6 +775,7 @@ function renderQuestion(i){
   const isFollowingPresenter = sessionMode === 'participant' && realtimeEnabled && hasActivePresenter();
   const feedback = participantFeedback[i];
   const correctAnswerText = q.options[q.correct];
+  const answerLabelText = feedbackAnswerLabel(i);
   const funFactText = FUN_FACTS[i] || '';
   const isQ3WithImages = i === 2;
   const opts = q.options.map((opt, idx)=> `
@@ -788,14 +804,14 @@ function renderQuestion(i){
           ? `<div class="controls">
               <button onclick="submitParticipantAnswer()" ${hasSubmitted?'disabled':''}>${hasSubmitted?'Submitted':'Submit'}</button>
             </div>
-            ${feedback ? `<div class="feedback-banner ${feedback.isCorrect?'feedback-correct':'feedback-wrong'}"><span class="label">${feedback.isCorrect?'Correct!':'Not Quite!'}</span>${feedback.message}</div><div class="answer-fact-card small" style="line-height:1.5"><strong>Correct answer:</strong> ${correctAnswerText}<br/><strong>Fun fact:</strong> ${funFactText}</div>` : ''}
+            ${feedback ? `<div class="feedback-banner ${feedback.isCorrect?'feedback-correct':'feedback-wrong'}"><span class="label">${feedback.isCorrect?'Correct!':'Not Quite!'}</span>${feedback.message}</div><div class="answer-fact-card small" style="line-height:1.5"><strong>${answerLabelText}:</strong> ${correctAnswerText}<br/><strong>Fun fact:</strong> ${funFactText}</div>` : ''}
             <p class="small" style="margin-top:8px">Your answer is locked in after submit. The presenter will advance everyone to the next question.</p>`
           : `<div class="controls">
               <button class="secondary" onclick="prev()" ${i===0?'disabled':''}>Back</button>
               <button onclick="submitParticipantAnswer()" ${hasSubmitted?'disabled':''}>${hasSubmitted?'Submitted':'Submit'}</button>
               <button onclick="next()">${i===total-1?'Finish':'Next'}</button>
             </div>
-            ${feedback ? `<div class="feedback-banner ${feedback.isCorrect?'feedback-correct':'feedback-wrong'}"><span class="label">${feedback.isCorrect?'Correct!':'Not Quite!'}</span>${feedback.message}</div><div class="answer-fact-card small" style="line-height:1.5"><strong>Correct answer:</strong> ${correctAnswerText}<br/><strong>Fun fact:</strong> ${funFactText}</div>` : ''}
+            ${feedback ? `<div class="feedback-banner ${feedback.isCorrect?'feedback-correct':'feedback-wrong'}"><span class="label">${feedback.isCorrect?'Correct!':'Not Quite!'}</span>${feedback.message}</div><div class="answer-fact-card small" style="line-height:1.5"><strong>${answerLabelText}:</strong> ${correctAnswerText}<br/><strong>Fun fact:</strong> ${funFactText}</div>` : ''}
             <p class="small" style="margin-top:8px">Offline mode: submit each answer, then use Next to continue.</p>`
       }
     </div>`;

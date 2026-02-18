@@ -48,6 +48,8 @@
   .synced-score-label{font-weight:900;text-transform:uppercase;font-size:.78rem;letter-spacing:.8px;margin-right:8px;color:#fff}
   .synced-correct{color:#58d68d}
   .synced-incorrect{color:#ff6b6b}
+  .synced-value-correct{color:#7dff9f;font-weight:900;font-size:1.08rem}
+  .synced-value-incorrect{color:#ff7d7d;font-weight:900;font-size:1.08rem}
   @media (max-width:480px){.slide-banner{width:min(92vw,400px)}}
 </style>
 </head>
@@ -420,7 +422,7 @@ function shouldShowSyncedQuestionStats(){
 }
 function syncedQuestionStatsLabel(index){
   const stats = getSyncedQuestionStats(index);
-  return `<span class="synced-score-label">Synced users</span><span class="synced-correct">Correct: ${stats.correct}</span> • <span class="synced-incorrect">Incorrect: ${stats.incorrect}</span>`;
+  return `<span class="synced-score-label">Synced users</span><span class="synced-correct">Correct: <span class="synced-value-correct">${stats.correct}</span></span> • <span class="synced-incorrect">Incorrect: <span class="synced-value-incorrect">${stats.incorrect}</span></span>`;
 }
 function updateSyncedQuestionStatsUI(){
   const el = document.getElementById('syncedQuestionStats');

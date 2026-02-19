@@ -50,32 +50,37 @@
   .synced-incorrect{color:#ff6b6b}
   .synced-value-correct{color:#7dff9f;font-weight:900;font-size:1.08rem}
   .synced-value-incorrect{color:#ff7d7d;font-weight:900;font-size:1.08rem}
-  .presentation-grid{display:grid;grid-template-columns:minmax(280px,1fr) minmax(560px,2.2fr);gap:14px;align-items:start}
+  .presentation-grid{display:grid;grid-template-columns:minmax(220px,1fr) minmax(0,2.2fr);gap:10px;align-items:start}
   .presentation-panel{background:#fff;border:1px solid #eadfbf;border-radius:12px;padding:14px}
   .presentation-panel .qtext{font-size:1.35rem;line-height:1.35}
   .presentation-panel .small{font-size:1rem}
   .presentation-panel ol.small li{font-size:1.03rem;line-height:1.45;margin-bottom:4px}
-  .presentation-pie{width:200px;height:200px;border-radius:50%;border:1px solid #eadfbf;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.05rem;color:#222;flex-shrink:0}
+  .presentation-pie{width:160px;height:160px;border-radius:50%;border:1px solid #eadfbf;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.05rem;color:#222;flex-shrink:0}
   .presentation-bottom-row{display:flex;gap:12px;align-items:center;margin-top:10px}
   .presentation-bottom-row .synced-score-callout{flex:1;margin:0}
-  .presentation-bottom-row .synced-score-callout{padding:9px 10px;font-size:.75rem}
-  .presentation-bottom-row .synced-score-label{font-size:.585rem}
-  .presentation-bottom-row .synced-value-correct,.presentation-bottom-row .synced-value-incorrect{font-size:.81rem}
-  .presentation-pie-wrap{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+  .presentation-pie-wrap{display:flex;flex-direction:column;align-items:center;flex-shrink:0;transform:translateY(-40%)}
   .presentation-legend{display:grid;gap:6px;margin-top:8px;min-width:160px}
   .presentation-legend .item{display:flex;justify-content:space-between;align-items:center;font-size:.95rem}
   .presentation-legend .dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px}
-  /* 16:9 viewport fill */
+  /* projector-safe viewport fit */
   body.presentation-active{overflow:hidden}
-  body.presentation-active .wrap{max-width:100%;padding:6px 14px 4px;display:flex;flex-direction:column;height:100vh;box-sizing:border-box}
-  body.presentation-active header{flex-shrink:0;margin-bottom:4px}
+  body.presentation-active .wrap{max-width:100%;padding:4px 10px 2px;display:flex;flex-direction:column;height:100vh;height:100dvh;box-sizing:border-box}
+  body.presentation-active header{flex-shrink:0;margin-bottom:2px}
   body.presentation-active .card{flex:1;overflow:hidden;min-height:0;border-radius:8px;display:flex;flex-direction:column}
-  body.presentation-active .hero{flex-shrink:0;padding:10px 16px}
-  body.presentation-active .body{flex:1;overflow:hidden;min-height:0;padding:10px 14px}
+  body.presentation-active .hero{flex-shrink:0;padding:8px 12px}
+  body.presentation-active .body{flex:1;overflow:hidden;min-height:0;padding:8px 10px}
   body.presentation-active .presentation-grid{height:100%;align-items:stretch}
   body.presentation-active .presentation-panel{height:100%;box-sizing:border-box;overflow-y:auto}
-  body.presentation-active .slide-banner{height:180px;width:100%;aspect-ratio:unset}
-  @media (max-width:960px){.presentation-grid{grid-template-columns:1fr}}
+  body.presentation-active .slide-banner{height:clamp(120px,22vh,170px);width:100%;aspect-ratio:unset}
+  body.presentation-active .wrap > p.small{display:none}
+  @media (max-width:760px){.presentation-grid{grid-template-columns:1fr}}
+  @media (max-height:760px){
+    body.presentation-active .presentation-panel .qtext{font-size:1.15rem}
+    body.presentation-active .presentation-panel .small{font-size:.92rem}
+    body.presentation-active .presentation-panel ol.small li{font-size:.94rem;line-height:1.35}
+    body.presentation-active .presentation-pie{width:140px;height:140px;font-size:.95rem}
+    body.presentation-active .presentation-bottom-row{gap:8px;margin-top:8px}
+  }
   @media (max-width:480px){.slide-banner{width:min(92vw,400px)}}
 </style>
 </head>
@@ -1079,6 +1084,8 @@ function renderQuestion(i){
   const q = QUESTIONS[i];
   const selected = (answered[i] == null) ? -1 : answered[i];
   const hasSubmitted = answered[i] != null;
+  const hasPresenter = hasActivePresenter();
+  const waitingForPresenter = sessionMode === 'participant' && !hasPresenter;
   const isFollowingPresenter = sessionMode === 'participant' && realtimeEnabled && hasActivePresenter();
   const feedback = participantFeedback[i];
   const showSyncedStats = shouldShowSyncedQuestionStats();
@@ -1088,7 +1095,7 @@ function renderQuestion(i){
   const isQ3WithImages = i === 2;
   const opts = q.options.map((opt, idx)=> `
     <label class="choice ${isQ3WithImages ? 'choice-media' : ''}" role="button" tabindex="0">
-      <input type="radio" name="opt" value="${idx}" ${idx===selected?'checked':''} />
+      <input type="radio" name="opt" value="${idx}" ${idx===selected?'checked':''} ${waitingForPresenter?'disabled':''} />
       ${isQ3WithImages ? `<img class="choice-thumb" src="${Q3_OPTION_IMAGES[idx===1 ? 2 : idx===2 ? 1 : idx]}" alt="${opt.replace(/\"/g, '&quot;')}" />` : ''}
       <div>${opt}</div>
     </label>`).join('');
@@ -1109,6 +1116,13 @@ function renderQuestion(i){
             <button onclick="next()">${i===total-1?'Finish':'Next'}</button>
           </div>
           <div id="syncedQuestionStats" class="synced-score-callout" style="display:${showSyncedStats?'block':'none'}">${syncedStatsText}</div>`
+        : waitingForPresenter
+          ? `<div class="controls">
+              <button onclick="submitParticipantAnswer()" disabled>Submit</button>
+              <span class="small" style="align-self:center"><strong>Waiting for presenter…</strong> Participants will sync automatically once a presenter starts.</span>
+            </div>
+            <div id="syncedQuestionStats" class="synced-score-callout" style="display:none"></div>
+            <p class="small" style="margin-top:8px">You cannot advance questions in Participant mode until a presenter is selected.</p>`
         : isFollowingPresenter
           ? `<div class="controls">
               <button onclick="submitParticipantAnswer()" ${hasSubmitted?'disabled':''}>${hasSubmitted?'Submitted':'Submit'}</button>
@@ -1131,6 +1145,7 @@ function renderQuestion(i){
   if(sessionMode === 'participant'){
     screen.querySelectorAll('.choice').forEach((el)=>{
       el.addEventListener('keydown', e=>{
+        if(waitingForPresenter) return;
         if(e.key===' '||e.key==='Enter'){ e.preventDefault(); el.querySelector('input').checked = true; }
       });
     });
@@ -1159,6 +1174,10 @@ function saveAnswer(){
 }
 function submitParticipantAnswer(){
   if(sessionMode !== 'participant' || !isQuestionPhase()) return;
+  if(!hasActivePresenter()){
+    alert('Waiting for presenter. You can submit after a presenter starts the session.');
+    return;
+  }
   if(answered[current] != null) return;
   const radios = screen.querySelectorAll('input[name="opt"]');
   let sel = -1; radios.forEach(r=>{ if(r.checked) sel = parseInt(r.value,10); });
@@ -1174,7 +1193,7 @@ function submitParticipantAnswer(){
   renderQuestion(current);
 }
 function next(){
-  if(sessionMode === 'participant' && realtimeEnabled && hasActivePresenter()) return;
+  if(sessionMode === 'participant') return;
   if(current < ROUND1_COUNT-1){
     current++;
     renderQuestion(current);
@@ -1186,7 +1205,7 @@ function next(){
   pushPresenterState(true);
 }
 function prev(){
-  if(sessionMode === 'participant' && realtimeEnabled && hasActivePresenter()) return;
+  if(sessionMode === 'participant') return;
   if(current > 0){
     current--;
     renderQuestion(current);

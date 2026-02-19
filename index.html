@@ -111,35 +111,16 @@ const SLIDE_IMAGES = [
   'data:image/jpeg;base64,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',
 ];
 
-const ROUND2_QUESTIONS = [
-  { text:"Which statement about niche Mardi Gras parades is accurate?", options:["The Mystic Krewe of Barkus features dogs in costume in the French Quarter","Barkus is a masked horse parade in Uptown","Barkus is a king cake charity bake-off"], correct:0 },
-  { text:"How is the Intergalactic Krewe of Chewbacchus best described?", options:["A formal ballroom-only krewe","A sci-fi themed walking parade","A children-only daytime float parade"], correct:1 },
-  { text:"Which krewe below is not a confirmed real tradition from this set?", options:["Krewe of Barkus","Intergalactic Krewe of Chewbacchus","Krewe of Meowx"], correct:2 },
-  { text:"Which claim about the Krewe of Libris is most accurate?", options:["It is a current major New Orleans super-krewe","It was a short-lived likely fictional claim in this set","It is the oldest continually running krewe"], correct:1 },
-  { text:"Which statement about Mardi Gras geography is correct?", options:["New Orleans is the only U.S. city with a true Mardi Gras tradition","Mobile and Galveston also have strong Mardi Gras cultures","Gulf Coast Mardi Gras events began after 1950"], correct:1 },
-  { text:"What is historically accurate about Mardi Gras in North America?", options:["French explorers and colonists brought it to Gulf Coast settlements in the early 1700s","It started as a U.S. federal holiday in Washington D.C.","It arrived first through Canadian rail festivals"], correct:0 },
-  { text:"Which timeline detail is accurate from the historical notes?", options:["Mobile was founded in 1702 and New Orleans in 1718","New Orleans was founded before Mobile","Both cities were founded in the same year"], correct:0 },
-  { text:"What helped shape modern Mardi Gras in the 1800s?", options:["Private krewes organizing themed parades and masked balls","A federal parade commission in Washington","A church rule requiring daytime-only parades"], correct:0 },
-  { text:"Which statement about the word krewe is most accurate here?", options:["It is simply a typo of crew officially confirmed as fact","The typo story is unverified; the key fact is krewes organized major celebrations","Krewe is a legal rank in city government"], correct:1 },
-  { text:"Which statement best reflects Mardi Gras as social expression?", options:["Groups like Zulu and Mardi Gras Indians used it to express identity and resist exclusion","These groups were created only for tourism in the 1970s","They were official city departments running parade permits"], correct:0 }
-];
-
 /*** ====== STATE ====== ***/
 const ROUND1_COUNT = QUESTIONS.length;
-const ALL_QUESTIONS = [...QUESTIONS, ...ROUND2_QUESTIONS];
-const ROUND2_COUNT = ROUND2_QUESTIONS.length;
-const total = ALL_QUESTIONS.length;
+const total = ROUND1_COUNT;
 
 const PHASE_ROUND1 = 'round1-question';
-const PHASE_ROUND1_STANDINGS = 'round1-standings';
-const PHASE_ROUND2 = 'round2-question';
 const PHASE_FINAL = 'final-standings';
 
 let phase = PHASE_ROUND1;
 let current = -1;
 let score = 0;
-let scoreRound1 = 0;
-let scoreRound2 = 0;
 let answered = []; // selected option indexes (absolute index across all rounds)
 let nameVal = "", aliasVal = "";
 let resultsFormUrl = ""; // optional: paste a Microsoft Form (Anyone can respond) link if you want
@@ -233,17 +214,7 @@ const FUN_FACTS = [
   'Gold actually means power.',
   'All costs including security are paid by the Krewe, and riders usually have to pay even more to be on a float. The associations of the color meanings were given 20 years after.',
   'Beads were originally thrown as single loose beads.',
-  'In New Orleans you are required to remove your mask by 6pm of Mardi Gras day.',
-  'Barkus is known for putting costumed dogs (and their humans) at the center of a French Quarter parade, making it one of the more recognizable "niche" Carnival events.',
-  'Chewbacchus is widely described as a fan-driven, sci-fi-inspired procession that marches on foot rather than using traditional float-heavy formats.',
-  'In this set, Meowx appears as an invented-sounding example and is not presented alongside established, verifiable krewes like Barkus or Chewbacchus.',
-  'The "Krewe of Libris" description reads like a plausible concept but is not supported here as a documented, known parade tradition.',
-  'Mardi Gras has deep regional roots across the Gulf Coast, and cities such as Mobile and Galveston maintain their own long-running Carnival organizations and events.',
-  'The earliest North American Mardi Gras observances are tied to French colonial presence along the Gulf, where pre-Lenten customs were carried overseas and adapted locally.',
-  'These founding dates help anchor the early-18th-century timeline in which French Gulf Coast settlements became centers for imported Carnival traditions.',
-  'The growth of krewe-run parades and invitation balls in the 19th century helped formalize Mardi Gras into the organized spectacle associated with it today.',
-  'While folk explanations about the spelling circulate, the historically grounded point is that krewes functioned as the organizing institutions behind many major events.',
-  'Mardi Gras has also served as a platform for communities to assert culture and belonging, with traditions like Zulu and Mardi Gras Indians carrying strong social meaning.'
+  'In New Orleans you are required to remove your mask by 6pm of Mardi Gras day.'
 ];
 const usedRightMessageIdx = new Set();
 const usedWrongMessageIdx = new Set();
@@ -265,8 +236,6 @@ function saveSessionState(){
       phase,
       current,
       score,
-      scoreRound1,
-      scoreRound2,
       answered,
       participantFeedback,
       participantId,
@@ -292,21 +261,15 @@ function restoreSessionState(){
     phase = typeof state.phase === 'string' ? state.phase : PHASE_ROUND1;
     current = typeof state.current === 'number' ? state.current : 0;
     score = typeof state.score === 'number' ? state.score : 0;
-    scoreRound1 = typeof state.scoreRound1 === 'number' ? state.scoreRound1 : 0;
-    scoreRound2 = typeof state.scoreRound2 === 'number' ? state.scoreRound2 : 0;
     answered = Array.isArray(state.answered) ? state.answered : [];
     participantFeedback = state.participantFeedback && typeof state.participantFeedback === 'object' ? state.participantFeedback : {};
     participantId = (typeof state.participantId === 'string' && state.participantId) ? state.participantId : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-    if(phase === PHASE_ROUND1_STANDINGS){
-      renderRound1Standings();
-      return true;
-    }
     if(phase === PHASE_FINAL){
       renderEnd();
       return true;
     }
-    if(current < 0 || current >= total) current = 0;
+    if(current < 0 || current >= ROUND1_COUNT) current = 0;
     renderQuestion(current);
     return true;
   }catch(e){
@@ -330,15 +293,11 @@ async function resumeRealtimeAfterRestore(){
     return;
   }
 
-  if(restoredPhase === PHASE_ROUND1_STANDINGS){
-    renderRound1Standings();
-    return;
-  }
   if(restoredPhase === PHASE_FINAL){
     renderEnd();
     return;
   }
-  if(restoredCurrent >= 0 && restoredCurrent < total){
+  if(restoredCurrent >= 0 && restoredCurrent < ROUND1_COUNT){
     renderQuestion(restoredCurrent);
   }
 }
@@ -350,10 +309,7 @@ function modeText(){
   return `Participant mode (follows presenter) • Sync: ${realtimeTransport}`;
 }
 function isQuestionPhase(){
-  return phase === PHASE_ROUND1 || phase === PHASE_ROUND2;
-}
-function roundTextFromIndex(index){
-  return index < ROUND1_COUNT ? 'Round 1' : 'Round 2';
+  return phase === PHASE_ROUND1;
 }
 const SLIDE_IMAGE_OVERRIDES = [
   './assets/slide_images/q01.png',
@@ -397,14 +353,7 @@ function updateHeader(){
   let pct = 0;
   if(phase === PHASE_ROUND1){
     pct = current < 0 ? 0 : Math.round(((idx)/total)*100);
-    tagQ.textContent = current < 0 ? `Round 1 • Q 0/${ROUND1_COUNT}` : `Round 1 • Q ${current+1}/${ROUND1_COUNT}`;
-  } else if(phase === PHASE_ROUND1_STANDINGS){
-    pct = 50;
-    tagQ.textContent = 'Round 1 Standings';
-  } else if(phase === PHASE_ROUND2){
-    const r2Index = Math.max(0, current - ROUND1_COUNT + 1);
-    pct = Math.round(((idx)/total)*100);
-    tagQ.textContent = `Round 2 • Q ${Math.max(1,r2Index)}/${ROUND2_COUNT}`;
+    tagQ.textContent = current < 0 ? `Q 0/${ROUND1_COUNT}` : `Q ${current+1}/${ROUND1_COUNT}`;
   } else {
     pct = 100;
     tagQ.textContent = 'Final Standings';
@@ -414,15 +363,15 @@ function updateHeader(){
     tagScore.style.display = 'none';
   } else {
     tagScore.style.display = 'inline-block';
-    tagScore.textContent = `Score: ${scoreRound1 + scoreRound2}`;
+    tagScore.textContent = `Score: ${score}`;
   }
 }
 function shouldShowSyncedQuestionStats(){
-  return sessionMode === 'participant' && isQuestionPhase() && realtimeEnabled && !!sharedState && hasActivePresenter();
+  return isQuestionPhase() && realtimeEnabled && !!sharedState;
 }
 function syncedQuestionStatsLabel(index){
   const stats = getSyncedQuestionStats(index);
-  return `<span class="synced-score-label">Synced users</span><span class="synced-correct">Correct: <span class="synced-value-correct">${stats.correct}</span></span> • <span class="synced-incorrect">Incorrect: <span class="synced-value-incorrect">${stats.incorrect}</span></span>`;
+  return `<span class="synced-score-label">Participants</span><span class="synced-correct">Correct: <span class="synced-value-correct">${stats.correct}</span></span> • <span class="synced-incorrect">Incorrect: <span class="synced-value-incorrect">${stats.incorrect}</span></span>`;
 }
 function updateSyncedQuestionStatsUI(){
   const el = document.getElementById('syncedQuestionStats');
@@ -579,11 +528,7 @@ function publishMyTally(){
     id: participantId,
     name: nameVal,
     answers: Array.from({ length: total }, (_, idx) => Number.isInteger(answered[idx]) ? answered[idx] : null),
-    rightRound1: scoreRound1,
-    rightRound2: scoreRound2,
-    rightOverall: scoreRound1 + scoreRound2,
-    totalRound1: ROUND1_COUNT,
-    totalRound2: ROUND2_COUNT,
+    rightOverall: score,
     totalOverall: total,
     mode: sessionMode,
     updatedAt: Date.now()
@@ -600,15 +545,13 @@ function getSharedResults(){
   });
   return items;
 }
-function getSharedTallies(kind = 'overall'){
+function getSharedTallies(){
   const items = getSharedResults();
-  if(kind === 'round1') return items.sort((a,b)=> (b.rightRound1 - a.rightRound1));
-  if(kind === 'round2') return items.sort((a,b)=> (b.rightRound2 - a.rightRound2));
   return items.sort((a,b)=> (b.rightOverall - a.rightOverall));
 }
 function getSyncedQuestionStats(index){
-  if(index < 0 || index >= total) return { correct: 0, incorrect: 0, submitted: 0 };
-  const correctIndex = ALL_QUESTIONS[index].correct;
+  if(index < 0 || index >= ROUND1_COUNT) return { correct: 0, incorrect: 0, submitted: 0 };
+  const correctIndex = QUESTIONS[index].correct;
   let correct = 0;
   let incorrect = 0;
   getSharedResults().forEach((result)=>{
@@ -620,17 +563,12 @@ function getSyncedQuestionStats(index){
   });
   return { correct, incorrect, submitted: correct + incorrect };
 }
-function renderTalliesHtml(kind = 'overall'){
-  const tallies = getSharedTallies(kind);
+function renderTalliesHtml(){
+  const tallies = getSharedTallies();
   if(!tallies.length) return '<p class="small">No submitted scores yet.</p>';
-  const line = kind === 'round1'
-    ? (t => `Round 1 Correct: ${t.rightRound1}/${t.totalRound1}`)
-    : kind === 'round2'
-      ? (t => `Round 2 Correct: ${t.rightRound2}/${t.totalRound2}`)
-      : (t => `Overall Correct: ${t.rightOverall}/${t.totalOverall}`);
   return `
     <ol class="small" style="text-align:left;margin-top:8px">
-      ${tallies.map(t => `<li><strong>${t.name}</strong> — ${line(t)}</li>`).join('')}
+      ${tallies.map(t => `<li><strong>${t.name}</strong> — Overall Correct: ${t.rightOverall}/${t.totalOverall}</li>`).join('')}
     </ol>`;
 }
 function applyParticipantState(){
@@ -650,10 +588,6 @@ function applyParticipantState(){
   if(phaseChanged){
     phase = remotePhase;
     lastRemotePhase = remotePhase;
-    if(phase === PHASE_ROUND1_STANDINGS){
-      renderRound1Standings();
-      return;
-    }
     if(phase === PHASE_FINAL){
       renderEnd();
       return;
@@ -752,8 +686,7 @@ async function initRealtime(){
     sharedState.set('presenterHeartbeat', Date.now());
     const isNewQuizPresentation = phase === PHASE_ROUND1
       && current === 0
-      && scoreRound1 === 0
-      && scoreRound2 === 0
+      && score === 0
       && Array.isArray(answered)
       && answered.length === 0;
     if(isNewQuizPresentation && firebaseFns && firebaseResultsRef){
@@ -771,16 +704,15 @@ async function initRealtime(){
     }, 5000);
     sharedStateObserverUnsub = sharedState.observe(()=>{
       if(sessionMode !== 'presenter') return;
-      if(phase === PHASE_ROUND1_STANDINGS){
-        renderRound1Standings();
-        return;
-      }
-      if(phase === PHASE_FINAL || (sharedState.get('ended') === true && current >= total-1)){
+      if(phase === PHASE_FINAL || (sharedState.get('ended') === true && current >= ROUND1_COUNT-1)){
         phase = PHASE_FINAL;
         renderEnd();
         return;
       }
-      if(isQuestionPhase()) updateHeader();
+      if(isQuestionPhase()){
+        updateHeader();
+        updateSyncedQuestionStatsUI();
+      }
     });
   } else {
     sharedStateObserverUnsub = sharedState.observe(()=>{
@@ -843,10 +775,10 @@ function renderAbout(){
     <div>
       ${renderBanner(1)}
       <ul class="small" style="margin-top:0">
-        <li>Two rounds: Round 1 then Round 2 with standings in between.</li>
+        <li>10 questions, single round.</li>
         <li>Participants submit each answer once and wait for presenter progression.</li>
         <li>Presenter mode works across devices in one public live session.</li>
-        <li>Final screen shows overall standings across both rounds.</li>
+        <li>Final screen shows overall standings.</li>
       </ul>
       <div class="controls">
         <button class="secondary" onclick="renderLanding()">Back</button>
@@ -854,37 +786,8 @@ function renderAbout(){
       </div>
     </div>`;
 }
-function renderRound1Standings(){
-  phase = PHASE_ROUND1_STANDINGS;
-  recalcScore();
-  publishMyTally();
-  const isFollowingPresenter = realtimeEnabled && hasActivePresenter();
-  screen.innerHTML = `
-    <div class="center">
-      ${renderBanner(ROUND1_COUNT-1)}
-      <h3>Round 1 Standings</h3>
-      <p class="small">Everyone can review current rankings before Round 2 starts.</p>
-      <div style="margin-top:12px;text-align:left">
-        <div class="small" style="font-weight:700">Rankings (Round 1 Correct)</div>
-        ${renderTalliesHtml('round1')}
-      </div>
-      <div class="controls" style="justify-content:center">
-        ${(sessionMode==='presenter' || !isFollowingPresenter) ? '<button onclick="startRound2()">Start Round 2</button>' : ''}
-      </div>
-      ${sessionMode==='participant' && isFollowingPresenter ? '<p class="small" style="margin-top:8px">Waiting for presenter to begin Round 2.</p>' : ''}
-    </div>`;
-  updateHeader();
-  saveSessionState();
-}
-function startRound2(){
-  if(sessionMode !== 'presenter') return;
-  phase = PHASE_ROUND2;
-  current = ROUND1_COUNT;
-  renderQuestion(current);
-  pushPresenterState(false);
-}
 function renderQuestion(i){
-  const q = ALL_QUESTIONS[i];
+  const q = QUESTIONS[i];
   const selected = (answered[i] == null) ? -1 : answered[i];
   const hasSubmitted = answered[i] != null;
   const isFollowingPresenter = sessionMode === 'participant' && realtimeEnabled && hasActivePresenter();
@@ -906,7 +809,6 @@ function renderQuestion(i){
       ${renderBanner(i)}
       <div class="small" style="margin-bottom:6px"><strong>${nameVal}</strong></div>
       <div class="small" style="margin-bottom:6px">${modeText()}</div>
-      <div class="small" style="margin-bottom:6px;font-weight:700">${roundTextFromIndex(i)}</div>
       <div class="qtext" style="font-weight:600">${q.text}</div>
       ${sessionMode==='presenter'
         ? `<p class="small" style="margin-top:10px">Presenter view: participants answer on their devices. Use Next/Back to control progression in this round.</p>
@@ -917,7 +819,8 @@ function renderQuestion(i){
         ? `<div class="controls">
             <button class="secondary" onclick="prev()" ${i===0?'disabled':''}>Back</button>
             <button onclick="next()">${i===total-1?'Finish':'Next'}</button>
-          </div>`
+          </div>
+          <div id="syncedQuestionStats" class="synced-score-callout" style="display:${showSyncedStats?'block':'none'}">${syncedStatsText}</div>`
         : isFollowingPresenter
           ? `<div class="controls">
               <button onclick="submitParticipantAnswer()" ${hasSubmitted?'disabled':''}>${hasSubmitted?'Submitted':'Submit'}</button>
@@ -949,17 +852,11 @@ function renderQuestion(i){
   saveSessionState();
 }
 function recalcScore(){
-  let r1 = 0;
-  let r2 = 0;
-  for(let i=0;i<total;i++){
-    if(answered[i] === ALL_QUESTIONS[i].correct){
-      if(i < ROUND1_COUNT) r1++;
-      else r2++;
-    }
+  let s = 0;
+  for(let i=0;i<ROUND1_COUNT;i++){
+    if(answered[i] === QUESTIONS[i].correct) s++;
   }
-  scoreRound1 = r1;
-  scoreRound2 = r2;
-  score = r1 + r2;
+  score = s;
 }
 function saveAnswer(){
   if(sessionMode === 'participant') return false;
@@ -979,7 +876,7 @@ function submitParticipantAnswer(){
   let sel = -1; radios.forEach(r=>{ if(r.checked) sel = parseInt(r.value,10); });
   if(sel === -1){ alert('Pick an answer, then tap Submit.'); return; }
   answered[current] = sel;
-  const isCorrect = sel === ALL_QUESTIONS[current].correct;
+  const isCorrect = sel === QUESTIONS[current].correct;
   const message = isCorrect
     ? pickUniqueMessage(RIGHT_MESSAGES, usedRightMessageIdx, 'right')
     : pickUniqueMessage(WRONG_MESSAGES, usedWrongMessageIdx, 'wrong');
@@ -990,38 +887,19 @@ function submitParticipantAnswer(){
 }
 function next(){
   if(sessionMode === 'participant' && realtimeEnabled && hasActivePresenter()) return;
-  if(phase === PHASE_ROUND1){
-    if(current < ROUND1_COUNT-1){
-      current++;
-      renderQuestion(current);
-      pushPresenterState(false);
-      return;
-    }
-    renderRound1Standings();
-    pushPresenterState(false);
-    return;
-  }
-  if(phase === PHASE_ROUND2){
-    if(current < total-1){
-      current++;
-      renderQuestion(current);
-      pushPresenterState(false);
-      return;
-    }
-    phase = PHASE_FINAL;
-    renderEnd();
-    pushPresenterState(true);
-  }
-}
-function prev(){
-  if(sessionMode === 'participant' && realtimeEnabled && hasActivePresenter()) return;
-  if(phase === PHASE_ROUND1 && current>0){
-    current--;
+  if(current < ROUND1_COUNT-1){
+    current++;
     renderQuestion(current);
     pushPresenterState(false);
     return;
   }
-  if(phase === PHASE_ROUND2 && current>ROUND1_COUNT){
+  phase = PHASE_FINAL;
+  renderEnd();
+  pushPresenterState(true);
+}
+function prev(){
+  if(sessionMode === 'participant' && realtimeEnabled && hasActivePresenter()) return;
+  if(current > 0){
     current--;
     renderQuestion(current);
     pushPresenterState(false);
@@ -1037,15 +915,15 @@ function renderEnd(){
               score >= Math.ceil(total*0.7) ? "Great job! Let the good times roll!" :
               "Nice try—catch more throws next parade!";
   const summary = {
-    name:nameVal, alias:aliasVal, scoreOverall: score, scoreRound1, scoreRound2, total,
-    answers: ALL_QUESTIONS.map((q,i)=>({ q:i+1, picked: (answered[i] == null) ? null : answered[i], correct: q.correct }))
+    name:nameVal, alias:aliasVal, scoreOverall: score, total,
+    answers: QUESTIONS.map((q,i)=>({ q:i+1, picked: (answered[i] == null) ? null : answered[i], correct: q.correct }))
   };
   const blob = encodeURIComponent(JSON.stringify(summary,null,2));
   const mailto = `mailto:${encodeURIComponent('justin.ungerer@bayer.com')}?subject=${encodeURIComponent('Mardi Gras Quiz Results - '+nameVal)}&body=${blob}`;
   screen.innerHTML = `
     <div class="center">
       ${renderBanner(total-1)}
-      ${sessionMode==='participant' ? `<h3>Final Score: ${score}/${total}</h3><p class="small">Round 1: ${scoreRound1}/${ROUND1_COUNT} • Round 2: ${scoreRound2}/${ROUND2_COUNT}</p><p class="small">${msg}</p>` : `<h3>Presenter Dashboard</h3><p class="small">Quiz complete. Overall standings are shown below.</p>`}
+      ${sessionMode==='participant' ? `<h3>Final Score: ${score}/${total}</h3><p class="small">${msg}</p>` : `<h3>Presenter Dashboard</h3><p class="small">Quiz complete. Overall standings are shown below.</p>`}
       <div class="controls" style="justify-content:center">
         <button class="secondary" onclick="retake()">Retake</button>
       </div>
@@ -1054,24 +932,24 @@ function renderEnd(){
       </p>
       <details style="margin-top:10px"><summary class="small">Review answers</summary>
         <ol class="small" style="text-align:left;margin-top:8px">
-          ${ALL_QUESTIONS.map((q,i)=> {
+          ${QUESTIONS.map((q,i)=> {
             const pick = answered[i];
             const ok = pick===q.correct;
-            return `<li>${ok?'✅':'❌'} ${i<ROUND1_COUNT?'R1':'R2'} Q${i<ROUND1_COUNT?i+1:i-ROUND1_COUNT+1}: ${q.text}
+            return `<li>${ok?'✅':'❌'} Q${i+1}: ${q.text}
               <div><em>Your answer:</em> ${pick!=null ? q.options[pick] : '—'}${ok?'':`<br/><em>Correct:</em> ${q.options[q.correct]}`}</div>
             </li>`;
           }).join('')}
         </ol>
       </details>
-      <div style="margin-top:12px;text-align:left"><div class="small" style="font-weight:600">Overall Standings (highest correct)</div>${renderTalliesHtml('overall')}<div class="small">This list updates automatically as participants submit answers.</div></div>
+      <div style="margin-top:12px;text-align:left"><div class="small" style="font-weight:600">Overall Standings (highest correct)</div>${renderTalliesHtml()}<div class="small">This list updates automatically as participants submit answers.</div></div>
     </div>`;
   updateHeader();
   saveSessionState();
 }
 function copyResults(){
   const summary = {
-    name:nameVal, alias:aliasVal, scoreOverall: score, scoreRound1, scoreRound2, total,
-    answers: ALL_QUESTIONS.map((q,i)=>({ q:i+1, picked: (answered[i] == null) ? null : answered[i], correct: q.correct }))
+    name:nameVal, alias:aliasVal, scoreOverall: score, total,
+    answers: QUESTIONS.map((q,i)=>({ q:i+1, picked: (answered[i] == null) ? null : answered[i], correct: q.correct }))
   };
   const text = JSON.stringify(summary,null,2);
   if(navigator.clipboard && navigator.clipboard.writeText){
@@ -1104,8 +982,6 @@ function retake(){
   sessionMode = 'participant';
   phase = PHASE_ROUND1;
   current=-1; score=0; answered=[];
-  scoreRound1 = 0;
-  scoreRound2 = 0;
   participantFeedback = {};
   lastRemoteCurrent = -1;
   lastRemoteEnded = false;
@@ -1128,8 +1004,6 @@ async function startQuiz(){
   sessionMode = selectedMode;
   phase = PHASE_ROUND1;
   score = 0;
-  scoreRound1 = 0;
-  scoreRound2 = 0;
   answered = [];
   participantFeedback = {};
   lastRemoteCurrent = -1;

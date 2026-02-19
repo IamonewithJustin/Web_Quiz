@@ -508,12 +508,12 @@ function handleLandingModeChange(){
   const nameIn = document.getElementById('nameIn');
   const nameHint = document.getElementById('nameHint');
   if(!modeIn || !nameIn || !nameHint) return;
-  const isPresentation = modeIn.value === 'presentation';
-  if(isPresentation){
+  const requiresName = modeIn.value === 'participant';
+  if(!requiresName){
     nameIn.value = '';
     nameIn.disabled = true;
-    nameIn.placeholder = 'No name needed for presentation view';
-    nameHint.textContent = 'Name is not used for presentation view.';
+    nameIn.placeholder = 'No name needed for this mode';
+    nameHint.textContent = 'Name is only used for Participant mode.';
   } else {
     nameIn.disabled = false;
     nameIn.placeholder = 'Your Name or Alias (required)';
@@ -1029,7 +1029,7 @@ function renderLanding(){
   screen.innerHTML = `
     <div>
       ${renderBanner(0)}
-      <p class="small">Select a mode, then start the quiz. Name is required for Presenter/Participant and not needed for Presentation View.</p>
+      <p class="small">Select a mode, then start the quiz. Name is required only for Participant mode.</p>
       <div class="row">
         <div style="width:100%">
           <div id="nameHint" class="small" style="margin:0 0 6px 2px">Name or Alias</div>
@@ -1282,12 +1282,16 @@ async function startQuiz(){
   stopLandingPresenterWatch();
   const selectedMode = document.getElementById('modeIn').value;
   const n = document.getElementById('nameIn').value.trim();
-  if(selectedMode !== 'presentation' && !n){
+  if(selectedMode === 'participant' && !n){
     alert('Please enter your Name or Alias to continue.');
     return;
   }
   participantId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  nameVal = selectedMode === 'presentation' ? 'Presentation Screen' : n;
+  nameVal = selectedMode === 'participant'
+    ? n
+    : selectedMode === 'presentation'
+      ? 'Presentation Screen'
+      : 'Presenter Screen';
   aliasVal = '';
   sessionMode = selectedMode;
   phase = PHASE_ROUND1;

@@ -1133,7 +1133,7 @@ function renderQuestion(i){
       ${sessionMode==='presenter'
         ? `<p class="small" style="margin-top:10px">Presenter view: participants answer on their devices. Use Next/Back to control progression in this round.</p>
            <p class="small" style="margin-top:6px"><strong>Note:</strong> Starting a presenter session clears prior standings for a fresh ranking board.</p>
-           <div class="answer-fact-card small" style="line-height:1.5"><strong>Correct answer:</strong> ${correctAnswerText}<br/><strong>Fun fact:</strong> ${funFactText}</div>`
+           <div class="answer-fact-card small" style="line-height:1.5"><strong>Correct answer:</strong> ${correctAnswerText}</div>`
         : `<form id="form" class="choices" onsubmit="event.preventDefault()">${opts}</form>`
       }
       ${sessionMode==='presenter'

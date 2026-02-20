@@ -509,7 +509,22 @@ function applyLandingPresenterAvailability(){
     presentationOption.hidden = presentationActive;
     if(presentationActive && modeIn.value === 'presentation') modeIn.value = 'participant';
   }
+  updateForceResetAvailability();
   handleLandingModeChange();
+}
+function updateForceResetAvailability(){
+  const resetBtn = document.getElementById('forceResetBtn');
+  const modeIn = document.getElementById('modeIn');
+  if(!resetBtn) return;
+  const presenterSelected = !!modeIn && modeIn.value === 'presenter';
+  const presentationSelected = !!modeIn && modeIn.value === 'presentation';
+  const presenterActive = !!landingPresenterActive;
+  const presentationActive = !!landingPresentationActive;
+  const disabled = presenterSelected || presentationSelected || presenterActive || presentationActive;
+  resetBtn.disabled = disabled;
+  resetBtn.title = disabled
+    ? 'Force Reset is disabled while presenter/presentation is selected or active.'
+    : 'Clear all Firebase session data and start fresh';
 }
 function handleLandingModeChange(){
   const modeIn = document.getElementById('modeIn');
@@ -527,6 +542,7 @@ function handleLandingModeChange(){
     nameIn.placeholder = 'Your Name or Alias (required)';
     nameHint.textContent = 'Name or Alias';
   }
+  updateForceResetAvailability();
 }
 async function startLandingPresenterWatch(){
   stopLandingPresenterWatch();
@@ -1000,6 +1016,17 @@ function pickUniqueMessage(pool, usedSet, type){
   return `${pool[idx]} (Encore #${wrongEncoreCounter})`;
 }
 async function forceResetAll(){
+  const modeIn = document.getElementById('modeIn');
+  const localPresenterSelected = !!modeIn && modeIn.value === 'presenter';
+  const localPresentationSelected = !!modeIn && modeIn.value === 'presentation';
+  const landingPresenterHeartbeat = landingPresenterSnapshot.presenterHeartbeat || 0;
+  const landingPresenterRunning = !!landingPresenterSnapshot.presenterToken && (Date.now() - landingPresenterHeartbeat) < 10000;
+  const landingPresentationHeartbeat = landingPresenterSnapshot.presentationHeartbeat || 0;
+  const landingPresentationRunning = !!landingPresenterSnapshot.presentationToken && (Date.now() - landingPresentationHeartbeat) < 10000;
+  if(localPresenterSelected || localPresentationSelected || landingPresenterRunning || landingPresentationRunning || hasActivePresenter() || hasActivePresentation()){
+    alert('Force Reset is disabled while presenter/presentation is selected or active.');
+    return;
+  }
   if(!confirm('Clear all session data and Firebase room state?\nThis resets scores, results, and tokens for everyone in this room.')) return;
   destroyRealtime();
   clearSessionState();
@@ -1054,7 +1081,7 @@ function renderLanding(){
       </div>
       <div class="controls" style="margin-top:14px">
         <button class="secondary" onclick="renderAbout()">About</button>
-        <button class="outline" onclick="forceResetAll()" style="color:#b71c1c;border-color:#b71c1c" title="Clear all Firebase session data and start fresh">Force Reset</button>
+        <button id="forceResetBtn" class="outline" onclick="forceResetAll()" style="color:#b71c1c;border-color:#b71c1c" title="Clear all Firebase session data and start fresh">Force Reset</button>
         <button onclick="startQuiz()">Start Quiz</button>
       </div>
     </div>`;
@@ -1107,7 +1134,8 @@ function renderQuestion(i){
       <div class="qtext" style="font-weight:600">${q.text}</div>
       ${sessionMode==='presenter'
         ? `<p class="small" style="margin-top:10px">Presenter view: participants answer on their devices. Use Next/Back to control progression in this round.</p>
-           <p class="small" style="margin-top:6px"><strong>Note:</strong> Starting a presenter session clears prior standings for a fresh ranking board.</p>`
+           <p class="small" style="margin-top:6px"><strong>Note:</strong> Starting a presenter session clears prior standings for a fresh ranking board.</p>
+           <div class="answer-fact-card small" style="line-height:1.5"><strong>Correct answer:</strong> ${correctAnswerText}<br/><strong>Fun fact:</strong> ${funFactText}</div>`
         : `<form id="form" class="choices" onsubmit="event.preventDefault()">${opts}</form>`
       }
       ${sessionMode==='presenter'

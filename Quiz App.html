@@ -50,6 +50,37 @@
   .synced-incorrect{color:#ff6b6b}
   .synced-value-correct{color:#7dff9f;font-weight:900;font-size:1.08rem}
   .synced-value-incorrect{color:#ff7d7d;font-weight:900;font-size:1.08rem}
+  .presentation-grid{display:grid;grid-template-columns:minmax(220px,1fr) minmax(0,2.2fr);gap:10px;align-items:start}
+  .presentation-panel{background:#fff;border:1px solid #eadfbf;border-radius:12px;padding:14px}
+  .presentation-panel .qtext{font-size:1.35rem;line-height:1.35}
+  .presentation-panel .small{font-size:1rem}
+  .presentation-panel ol.small li{font-size:1.03rem;line-height:1.45;margin-bottom:4px}
+  .presentation-pie{width:160px;height:160px;border-radius:50%;border:1px solid #eadfbf;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.05rem;color:#222;flex-shrink:0}
+  .presentation-bottom-row{display:flex;gap:12px;align-items:center;margin-top:10px}
+  .presentation-bottom-row .synced-score-callout{flex:1;margin:0}
+  .presentation-pie-wrap{display:flex;flex-direction:column;align-items:center;flex-shrink:0;transform:translateY(-40%)}
+  .presentation-legend{display:grid;gap:6px;margin-top:8px;min-width:160px}
+  .presentation-legend .item{display:flex;justify-content:space-between;align-items:center;font-size:.95rem}
+  .presentation-legend .dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px}
+  /* projector-safe viewport fit */
+  body.presentation-active{overflow:hidden}
+  body.presentation-active .wrap{max-width:100%;padding:4px 10px 2px;display:flex;flex-direction:column;height:100vh;height:100dvh;box-sizing:border-box}
+  body.presentation-active header{flex-shrink:0;margin-bottom:2px}
+  body.presentation-active .card{flex:1;overflow:hidden;min-height:0;border-radius:8px;display:flex;flex-direction:column}
+  body.presentation-active .hero{flex-shrink:0;padding:8px 12px}
+  body.presentation-active .body{flex:1;overflow:hidden;min-height:0;padding:8px 10px}
+  body.presentation-active .presentation-grid{height:100%;align-items:stretch}
+  body.presentation-active .presentation-panel{height:100%;box-sizing:border-box;overflow-y:auto}
+  body.presentation-active .slide-banner{height:clamp(120px,22vh,170px);width:100%;aspect-ratio:unset}
+  body.presentation-active .wrap > p.small{display:none}
+  @media (max-width:760px){.presentation-grid{grid-template-columns:1fr}}
+  @media (max-height:760px){
+    body.presentation-active .presentation-panel .qtext{font-size:1.15rem}
+    body.presentation-active .presentation-panel .small{font-size:.92rem}
+    body.presentation-active .presentation-panel ol.small li{font-size:.94rem;line-height:1.35}
+    body.presentation-active .presentation-pie{width:140px;height:140px;font-size:.95rem}
+    body.presentation-active .presentation-bottom-row{gap:8px;margin-top:8px}
+  }
   @media (max-width:480px){.slide-banner{width:min(92vw,400px)}}
 </style>
 </head>
@@ -137,16 +168,20 @@ let firebaseResultsUnsub = null;
 let landingPresenterStateUnsub = null;
 let landingPresenterSnapshot = {};
 let landingPresenterActive = null;
+let landingPresentationActive = null;
 let realtimeTransport = 'offline';
 let sharedStateObserverUnsub = null;
 let presenterToken = '';
 let presenterHeartbeatTimer = null;
+let presentationToken = '';
+let presentationHeartbeatTimer = null;
 let participantId = '';
 let participantFeedback = {};
 let lastRemoteCurrent = -1;
 let lastRemoteEnded = false;
 let lastRemotePhase = '';
 let realtimeEnabled = true;
+let isPresentationReady = false;
 const SESSION_STORAGE_KEY = 'mardi-gras-quiz-session-v1';
 const PUBLIC_ROOM_ID = 'mardi-gras-public-session';
 const FIREBASE_CONFIG = {
@@ -254,10 +289,16 @@ function restoreSessionState(){
     const state = JSON.parse(raw);
     if(!state || typeof state !== 'object') return false;
     if(!state.nameVal || typeof state.nameVal !== 'string') return false;
+    /* Always go back to landing for presenter — token must be re-claimed */
+    if(state.sessionMode === 'presenter') return false;
 
     nameVal = state.nameVal;
     aliasVal = typeof state.aliasVal === 'string' ? state.aliasVal : '';
-    sessionMode = state.sessionMode === 'presenter' ? 'presenter' : 'participant';
+    if(state.sessionMode === 'presenter' || state.sessionMode === 'participant' || state.sessionMode === 'presentation'){
+      sessionMode = state.sessionMode;
+    } else {
+      sessionMode = 'participant';
+    }
     phase = typeof state.phase === 'string' ? state.phase : PHASE_ROUND1;
     current = typeof state.current === 'number' ? state.current : 0;
     score = typeof state.score === 'number' ? state.score : 0;
@@ -266,10 +307,18 @@ function restoreSessionState(){
     participantId = (typeof state.participantId === 'string' && state.participantId) ? state.participantId : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
     if(phase === PHASE_FINAL){
+      if(sessionMode === 'presentation'){
+        renderPresentationView(current, true);
+        return true;
+      }
       renderEnd();
       return true;
     }
     if(current < 0 || current >= ROUND1_COUNT) current = 0;
+    if(sessionMode === 'presentation'){
+      renderPresentationView(current);
+      return true;
+    }
     renderQuestion(current);
     return true;
   }catch(e){
@@ -277,7 +326,7 @@ function restoreSessionState(){
   }
 }
 async function resumeRealtimeAfterRestore(){
-  if(sessionMode !== 'participant' || !nameVal) return;
+  if((sessionMode !== 'participant' && sessionMode !== 'presentation') || !nameVal) return;
   const restoredPhase = phase;
   const restoredCurrent = current;
   const ok = await initRealtime();
@@ -289,16 +338,19 @@ async function resumeRealtimeAfterRestore(){
   lastRemotePhase = '';
 
   if(hasActivePresenter()){
-    applyParticipantState();
+    if(sessionMode === 'participant') applyParticipantState();
+    else applyPresentationState();
     return;
   }
 
   if(restoredPhase === PHASE_FINAL){
-    renderEnd();
+    if(sessionMode === 'presentation') renderPresentationView(restoredCurrent, true);
+    else renderEnd();
     return;
   }
   if(restoredCurrent >= 0 && restoredCurrent < ROUND1_COUNT){
-    renderQuestion(restoredCurrent);
+    if(sessionMode === 'presentation') renderPresentationView(restoredCurrent);
+    else renderQuestion(restoredCurrent);
   }
 }
 
@@ -306,13 +358,21 @@ async function resumeRealtimeAfterRestore(){
 function modeText(){
   if(!realtimeEnabled) return 'Offline mode (local quiz only)';
   if(sessionMode === 'presenter') return `Presenter mode (controls progression) • Sync: ${realtimeTransport}`;
+  if(sessionMode === 'presentation') return `Presentation view • Sync: ${realtimeTransport}`;
   return `Participant mode (follows presenter) • Sync: ${realtimeTransport}`;
+}
+function setPresentationShell(enabled){
+  const wrap = document.querySelector('.wrap');
+  if(!wrap) return;
+  wrap.style.maxWidth = enabled ? '100%' : '760px';
+  if(enabled) document.body.classList.add('presentation-active');
+  else document.body.classList.remove('presentation-active');
 }
 function isQuestionPhase(){
   return phase === PHASE_ROUND1;
 }
 const SLIDE_IMAGE_OVERRIDES = [
-  './assets/slide_images/q01.png',
+  './assets/slide_images/q01.jpg',
   './assets/slide_images/q02.png',
   null,
   './assets/slide_images/q04.png',
@@ -353,13 +413,17 @@ function updateHeader(){
   let pct = 0;
   if(phase === PHASE_ROUND1){
     pct = current < 0 ? 0 : Math.round(((idx)/total)*100);
-    tagQ.textContent = current < 0 ? `Q 0/${ROUND1_COUNT}` : `Q ${current+1}/${ROUND1_COUNT}`;
+    if(sessionMode === 'presentation'){
+      tagQ.textContent = current < 0 ? `Display • Q 0/${ROUND1_COUNT}` : `Display • Q ${current+1}/${ROUND1_COUNT}`;
+    } else {
+      tagQ.textContent = current < 0 ? `Q 0/${ROUND1_COUNT}` : `Q ${current+1}/${ROUND1_COUNT}`;
+    }
   } else {
     pct = 100;
-    tagQ.textContent = 'Final Standings';
+    tagQ.textContent = sessionMode === 'presentation' ? 'Display • Final Standings' : 'Final Standings';
   }
   bar.style.width = pct + '%';
-  if(sessionMode === 'presenter'){
+  if(sessionMode === 'presenter' || sessionMode === 'presentation'){
     tagScore.style.display = 'none';
   } else {
     tagScore.style.display = 'inline-block';
@@ -385,13 +449,21 @@ function updateSyncedQuestionStatsUI(){
 }
 function destroyRealtime(){
   if(presenterHeartbeatTimer){ clearInterval(presenterHeartbeatTimer); presenterHeartbeatTimer = null; }
+  if(presentationHeartbeatTimer){ clearInterval(presentationHeartbeatTimer); presentationHeartbeatTimer = null; }
   if(sharedStateObserverUnsub){ sharedStateObserverUnsub(); sharedStateObserverUnsub = null; }
   if(sharedState && sessionMode === 'presenter' && presenterToken && sharedState.get('presenterToken') === presenterToken){
     sharedState.delete('presenterToken');
     sharedState.delete('presenterName');
     sharedState.set('presenterHeartbeat', 0);
   }
+  if(sharedState && sessionMode === 'presentation' && presentationToken && sharedState.get('presentationToken') === presentationToken){
+    sharedState.delete('presentationToken');
+    sharedState.delete('presentationName');
+    sharedState.set('presentationHeartbeat', 0);
+  }
   presenterToken = '';
+  presentationToken = '';
+  isPresentationReady = false;
   if(firebaseStateUnsub){ firebaseStateUnsub(); firebaseStateUnsub = null; }
   if(firebaseResultsUnsub){ firebaseResultsUnsub(); firebaseResultsUnsub = null; }
   firebaseSessionRoot = null;
@@ -407,21 +479,70 @@ function stopLandingPresenterWatch(){
   }
   landingPresenterSnapshot = {};
   landingPresenterActive = null;
+  landingPresentationActive = null;
 }
 function applyLandingPresenterAvailability(){
   const modeIn = document.getElementById('modeIn');
   if(!modeIn) return;
   const presenterOption = modeIn.querySelector('option[value="presenter"]');
+  const participantOption = modeIn.querySelector('option[value="participant"]');
+  const presentationOption = modeIn.querySelector('option[value="presentation"]');
   if(!presenterOption) return;
-  const heartbeat = landingPresenterSnapshot.presenterHeartbeat || 0;
-  const active = !!landingPresenterSnapshot.presenterToken && (Date.now() - heartbeat) < 10000;
-  if(landingPresenterActive === active) return;
-  landingPresenterActive = active;
-  presenterOption.disabled = active;
-  presenterOption.textContent = active
+  const presenterHeartbeat = landingPresenterSnapshot.presenterHeartbeat || 0;
+  const presenterActive = !!landingPresenterSnapshot.presenterToken && (Date.now() - presenterHeartbeat) < 10000;
+  const presentationHeartbeat = landingPresenterSnapshot.presentationHeartbeat || 0;
+  const presentationActive = !!landingPresenterSnapshot.presentationToken && (Date.now() - presentationHeartbeat) < 10000;
+  if(landingPresenterActive !== presenterActive){
+    landingPresenterActive = presenterActive;
+    presenterOption.disabled = presenterActive;
+    presenterOption.textContent = presenterActive
     ? 'Presenter (controls everyone) — unavailable'
     : 'Presenter (controls everyone)';
-  if(active && modeIn.value === 'presenter') modeIn.value = 'participant';
+    if(presenterActive && modeIn.value === 'presenter') modeIn.value = 'participant';
+  }
+  if(participantOption){
+    participantOption.disabled = false;
+    participantOption.textContent = 'Participant (follows presenter)';
+  }
+  if(presentationOption && landingPresentationActive !== presentationActive){
+    landingPresentationActive = presentationActive;
+    presentationOption.hidden = presentationActive;
+    if(presentationActive && modeIn.value === 'presentation') modeIn.value = 'participant';
+  }
+  updateForceResetAvailability();
+  handleLandingModeChange();
+}
+function updateForceResetAvailability(){
+  const resetBtn = document.getElementById('forceResetBtn');
+  const modeIn = document.getElementById('modeIn');
+  if(!resetBtn) return;
+  const presenterSelected = !!modeIn && modeIn.value === 'presenter';
+  const presentationSelected = !!modeIn && modeIn.value === 'presentation';
+  const presenterActive = !!landingPresenterActive;
+  const presentationActive = !!landingPresentationActive;
+  const disabled = presenterSelected || presentationSelected || presenterActive || presentationActive;
+  resetBtn.disabled = disabled;
+  resetBtn.title = disabled
+    ? 'Force Reset is disabled while presenter/presentation is selected or active.'
+    : 'Clear all Firebase session data and start fresh';
+}
+function handleLandingModeChange(){
+  const modeIn = document.getElementById('modeIn');
+  const nameIn = document.getElementById('nameIn');
+  const nameHint = document.getElementById('nameHint');
+  if(!modeIn || !nameIn || !nameHint) return;
+  const requiresName = modeIn.value === 'participant';
+  if(!requiresName){
+    nameIn.value = '';
+    nameIn.disabled = true;
+    nameIn.placeholder = 'No name needed for this mode';
+    nameHint.textContent = 'Name is only used for Participant mode.';
+  } else {
+    nameIn.disabled = false;
+    nameIn.placeholder = 'Your Name or Alias (required)';
+    nameHint.textContent = 'Name or Alias';
+  }
+  updateForceResetAvailability();
 }
 async function startLandingPresenterWatch(){
   stopLandingPresenterWatch();
@@ -563,6 +684,21 @@ function getSyncedQuestionStats(index){
   });
   return { correct, incorrect, submitted: correct + incorrect };
 }
+function getSyncedOptionDistribution(index){
+  const question = QUESTIONS[index];
+  if(!question) return { counts: [0,0,0], submitted: 0 };
+  const optionCount = Array.isArray(question.options) ? question.options.length : 0;
+  const counts = Array.from({ length: optionCount }, () => 0);
+  let submitted = 0;
+  getSharedResults().forEach((result)=>{
+    const picks = Array.isArray(result.answers) ? result.answers : [];
+    const picked = picks[index];
+    if(typeof picked !== 'number' || picked < 0 || picked >= optionCount) return;
+    counts[picked]++;
+    submitted++;
+  });
+  return { counts, submitted };
+}
 function renderTalliesHtml(){
   const tallies = getSharedTallies();
   if(!tallies.length) return '<p class="small">No submitted scores yet.</p>';
@@ -570,6 +706,78 @@ function renderTalliesHtml(){
     <ol class="small" style="text-align:left;margin-top:8px">
       ${tallies.map(t => `<li><strong>${t.name}</strong> — Overall Correct: ${t.rightOverall}/${t.totalOverall}</li>`).join('')}
     </ol>`;
+}
+function renderPresentationView(index = 0, showFinal = false){
+  setPresentationShell(true);
+  const safeIndex = (typeof index === 'number' && index >= 0 && index < ROUND1_COUNT) ? index : 0;
+  current = safeIndex;
+  const question = QUESTIONS[safeIndex];
+  const stats = getSyncedQuestionStats(safeIndex);
+  const distribution = getSyncedOptionDistribution(safeIndex);
+  const count1 = distribution.counts[0] || 0;
+  const count2 = distribution.counts[1] || 0;
+  const count3 = distribution.counts[2] || 0;
+  const votes = distribution.submitted;
+  const pct1 = votes ? Math.round((count1 / votes) * 100) : 0;
+  const pct2 = votes ? Math.round((count2 / votes) * 100) : 0;
+  const pct3 = votes ? Math.max(0, 100 - pct1 - pct2) : 0;
+  const seg1 = pct1;
+  const seg2 = pct1 + pct2;
+  const pieBackground = votes
+    ? `conic-gradient(var(--purple) 0 ${seg1}%, var(--green) ${seg1}% ${seg2}%, var(--gold) ${seg2}% 100%)`
+    : 'conic-gradient(#ddd 0 100%)';
+  const waitingText = hasActivePresenter()
+    ? ''
+    : '<p class="small" style="margin-top:10px"><strong>Waiting for presenter…</strong> This screen updates automatically when a presenter is active.</p>';
+
+  if(showFinal || phase === PHASE_FINAL){
+    screen.innerHTML = `
+      <div>
+        ${renderBanner(total-1)}
+        <div class="small" style="margin-bottom:6px"><strong>${nameVal}</strong></div>
+        <div class="small" style="margin-bottom:10px">${modeText()}</div>
+        <h3 style="margin-top:0">Final Standings Display</h3>
+        ${waitingText}
+        <div class="presentation-panel" style="margin-top:12px">
+          <div class="small" style="font-weight:700">Overall Standings (highest correct)</div>
+          ${renderTalliesHtml()}
+        </div>
+      </div>`;
+    updateHeader();
+    saveSessionState();
+    return;
+  }
+
+  const optionsHtml = question.options.map((opt, idx)=> `<li><strong>Answer ${idx+1}:</strong> ${opt}</li>`).join('');
+  screen.innerHTML = `
+    <div>
+      <div class="presentation-grid">
+        <div class="presentation-panel">
+          <div class="small" style="font-weight:700;margin-bottom:6px">Live Overall Scoreboard</div>
+          ${renderTalliesHtml()}
+        </div>
+        <div class="presentation-panel">
+          ${renderBanner(safeIndex)}
+          <div class="small" style="margin-bottom:4px"><strong>${nameVal}</strong> &nbsp;•&nbsp; ${modeText()}</div>
+          <div class="qtext" style="font-weight:600;margin-top:6px">${question.text}</div>
+          <ol class="small" style="margin-top:8px;padding-left:18px">${optionsHtml}</ol>
+          ${waitingText}
+          <div class="presentation-bottom-row">
+            <div class="synced-score-callout">${syncedQuestionStatsLabel(safeIndex)}</div>
+            <div class="presentation-pie-wrap">
+              <div class="presentation-pie" style="background:${pieBackground}">${votes} votes</div>
+              <div class="presentation-legend">
+                <div class="item"><span><span class="dot" style="background:var(--purple)"></span>Ans 1</span><span>${count1} (${pct1}%)</span></div>
+                <div class="item"><span><span class="dot" style="background:var(--green)"></span>Ans 2</span><span>${count2} (${pct2}%)</span></div>
+                <div class="item"><span><span class="dot" style="background:var(--gold)"></span>Ans 3</span><span>${count3} (${pct3}%)</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  updateHeader();
+  saveSessionState();
 }
 function applyParticipantState(){
   if(sessionMode !== 'participant' || !sharedState) return;
@@ -600,10 +808,31 @@ function applyParticipantState(){
   }
   updateHeader();
 }
+function applyPresentationState(){
+  if(sessionMode !== 'presentation' || !sharedState) return;
+  const remotePhase = sharedState.get('phase') || PHASE_ROUND1;
+  const ended = sharedState.get('ended') === true;
+  const remoteCurrent = sharedState.get('current');
+  if(typeof remoteCurrent === 'number' && remoteCurrent >= 0 && remoteCurrent < ROUND1_COUNT){
+    current = remoteCurrent;
+  }
+  phase = ended ? PHASE_FINAL : remotePhase;
+  if(phase === PHASE_FINAL){
+    renderPresentationView(current, true);
+    return;
+  }
+  renderPresentationView(current);
+}
 function hasActivePresenter(){
   if(!sharedState) return false;
   const token = sharedState.get('presenterToken');
   const heartbeat = sharedState.get('presenterHeartbeat') || 0;
+  return !!token && (Date.now() - heartbeat) < 10000;
+}
+function hasActivePresentation(){
+  if(!sharedState) return false;
+  const token = sharedState.get('presentationToken');
+  const heartbeat = sharedState.get('presentationHeartbeat') || 0;
   return !!token && (Date.now() - heartbeat) < 10000;
 }
 function dynamicImportCompat(url){
@@ -625,7 +854,8 @@ async function loadRealtimeLibs(){
       onValue: dbMod.onValue,
       remove: dbMod.remove,
       update: dbMod.update,
-      runTransaction: dbMod.runTransaction
+      runTransaction: dbMod.runTransaction,
+      onDisconnect: dbMod.onDisconnect
     };
     return true;
   }catch(err){
@@ -684,6 +914,11 @@ async function initRealtime(){
     }
     sharedState.set('presenterName', nameVal);
     sharedState.set('presenterHeartbeat', Date.now());
+    /* Server-side cleanup if browser closes without calling destroyRealtime */
+    if(firebaseFns.onDisconnect){
+      firebaseFns.onDisconnect(firebaseFns.child(firebaseStateRef,'presenterToken')).remove().catch(()=>{});
+      firebaseFns.onDisconnect(firebaseFns.child(firebaseStateRef,'presenterHeartbeat')).set(0).catch(()=>{});
+    }
     const isNewQuizPresentation = phase === PHASE_ROUND1
       && current === 0
       && score === 0
@@ -713,6 +948,42 @@ async function initRealtime(){
         updateHeader();
         updateSyncedQuestionStatsUI();
       }
+    });
+  } else if(sessionMode === 'presentation'){
+    presentationToken = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const tokenRef = firebaseFns.child(firebaseStateRef, 'presentationToken');
+    try {
+      const result = await firebaseFns.runTransaction(tokenRef, (currentToken) => {
+        const hb = sharedState.get('presentationHeartbeat') || 0;
+        if(currentToken && (Date.now() - hb) < 10000){
+          return;
+        }
+        return presentationToken;
+      });
+      if(!result.committed){
+        alert('Presentation view is already active on another screen.');
+        presentationToken = '';
+        destroyRealtime();
+        return false;
+      }
+    } catch(e){
+      console.error('Presentation transaction failed:', e);
+      alert('Could not claim presentation view. Try again.');
+      presentationToken = '';
+      destroyRealtime();
+      return false;
+    }
+    sharedState.set('presentationName', nameVal);
+    sharedState.set('presentationHeartbeat', Date.now());
+    presentationHeartbeatTimer = setInterval(()=>{
+      if(sharedState && sharedState.get('presentationToken') === presentationToken){
+        sharedState.set('presentationHeartbeat', Date.now());
+      }
+    }, 5000);
+    isPresentationReady = true;
+    sharedStateObserverUnsub = sharedState.observe(()=>{
+      if(sessionMode !== 'presentation') return;
+      applyPresentationState();
     });
   } else {
     sharedStateObserverUnsub = sharedState.observe(()=>{
@@ -744,19 +1015,65 @@ function pickUniqueMessage(pool, usedSet, type){
   wrongEncoreCounter++;
   return `${pool[idx]} (Encore #${wrongEncoreCounter})`;
 }
+async function forceResetAll(){
+  const modeIn = document.getElementById('modeIn');
+  const localPresenterSelected = !!modeIn && modeIn.value === 'presenter';
+  const localPresentationSelected = !!modeIn && modeIn.value === 'presentation';
+  const landingPresenterHeartbeat = landingPresenterSnapshot.presenterHeartbeat || 0;
+  const landingPresenterRunning = !!landingPresenterSnapshot.presenterToken && (Date.now() - landingPresenterHeartbeat) < 10000;
+  const landingPresentationHeartbeat = landingPresenterSnapshot.presentationHeartbeat || 0;
+  const landingPresentationRunning = !!landingPresenterSnapshot.presentationToken && (Date.now() - landingPresentationHeartbeat) < 10000;
+  if(localPresenterSelected || localPresentationSelected || landingPresenterRunning || landingPresentationRunning || hasActivePresenter() || hasActivePresentation()){
+    alert('Force Reset is disabled while presenter/presentation is selected or active.');
+    return;
+  }
+  if(!confirm('Clear all session data and Firebase room state?\nThis resets scores, results, and tokens for everyone in this room.')) return;
+  destroyRealtime();
+  clearSessionState();
+  sessionMode = 'participant';
+  phase = PHASE_ROUND1;
+  current = 0; score = 0; answered = [];
+  participantFeedback = {};
+  nameVal = ''; aliasVal = '';
+  lastRemoteCurrent = -1;
+  lastRemoteEnded = false;
+  lastRemotePhase = '';
+  usedRightMessageIdx.clear();
+  usedWrongMessageIdx.clear();
+  rightEncoreCounter = 0;
+  wrongEncoreCounter = 0;
+  isPresentationReady = false;
+  try{
+    if(await loadRealtimeLibs()){
+      const sessionRef = firebaseFns.ref(firebaseDb, `sessions/${PUBLIC_ROOM_ID}`);
+      const stateRef = firebaseFns.child(sessionRef, 'state');
+      const resultsRef = firebaseFns.child(sessionRef, 'results');
+      await firebaseFns.update(stateRef, {
+        presenterToken: null, presenterHeartbeat: 0, presenterName: null,
+        presentationToken: null, presentationHeartbeat: 0, presentationName: null,
+        phase: PHASE_ROUND1, ended: false, current: 0
+      }).catch(e => console.error('Reset state error:', e));
+      await firebaseFns.remove(resultsRef).catch(e => console.error('Reset results error:', e));
+    }
+  }catch(e){ console.error('Force reset Firebase error:', e); }
+  renderLanding();
+  updateHeader();
+}
 function renderLanding(){
+  setPresentationShell(false);
   screen.innerHTML = `
     <div>
       ${renderBanner(0)}
-      <p class="small">Enter your <strong>Name or Alias</strong> (for example, "BeadBoss") and then start the quiz.</p>
+      <p class="small">Select a mode, then start the quiz. Name is required only for Participant mode.</p>
       <div class="row">
         <div style="width:100%">
-          <div class="small" style="margin:0 0 6px 2px">Name or Alias</div>
+          <div id="nameHint" class="small" style="margin:0 0 6px 2px">Name or Alias</div>
           <input id="nameIn" type="text" placeholder="Your Name or Alias (required)" />
         </div>
         <div style="width:100%">
           <div class="small" style="margin:0 0 6px 2px">Mode</div>
-          <select id="modeIn" style="width:100%;padding:12px;border-radius:12px;border:1px solid #ddd">
+          <select id="modeIn" onchange="handleLandingModeChange()" style="width:100%;padding:12px;border-radius:12px;border:1px solid #ddd">
+            <option value="presentation">Presentation View (optional — select first)</option>
             <option value="presenter">Presenter (controls everyone)</option>
             <option value="participant">Participant (follows presenter)</option>
           </select>
@@ -764,10 +1081,12 @@ function renderLanding(){
       </div>
       <div class="controls" style="margin-top:14px">
         <button class="secondary" onclick="renderAbout()">About</button>
-        <button onclick="startQuiz()">Start quiz</button>
+        <button id="forceResetBtn" class="outline" onclick="forceResetAll()" style="color:#b71c1c;border-color:#b71c1c" title="Clear all Firebase session data and start fresh">Force Reset</button>
+        <button onclick="startQuiz()">Start Quiz</button>
       </div>
     </div>`;
   startLandingPresenterWatch().catch(e => console.error('Landing presenter watch failed:', e));
+  handleLandingModeChange();
   updateHeader();
 }
 function renderAbout(){
@@ -778,6 +1097,7 @@ function renderAbout(){
         <li>10 questions, single round.</li>
         <li>Participants submit each answer once and wait for presenter progression.</li>
         <li>Presenter mode works across devices in one public live session.</li>
+        <li>Presentation View is an optional room display with live metrics.</li>
         <li>Final screen shows overall standings.</li>
       </ul>
       <div class="controls">
@@ -787,21 +1107,23 @@ function renderAbout(){
     </div>`;
 }
 function renderQuestion(i){
+  setPresentationShell(false);
   const q = QUESTIONS[i];
   const selected = (answered[i] == null) ? -1 : answered[i];
   const hasSubmitted = answered[i] != null;
+  const hasPresenter = hasActivePresenter();
+  const waitingForPresenter = sessionMode === 'participant' && !hasPresenter;
   const isFollowingPresenter = sessionMode === 'participant' && realtimeEnabled && hasActivePresenter();
   const feedback = participantFeedback[i];
   const showSyncedStats = shouldShowSyncedQuestionStats();
   const syncedStatsText = syncedQuestionStatsLabel(i);
   const correctAnswerText = q.options[q.correct];
   const answerLabelText = feedbackAnswerLabel(i);
-  const funFactText = FUN_FACTS[i] || '';
   const isQ3WithImages = i === 2;
   const opts = q.options.map((opt, idx)=> `
     <label class="choice ${isQ3WithImages ? 'choice-media' : ''}" role="button" tabindex="0">
-      <input type="radio" name="opt" value="${idx}" ${idx===selected?'checked':''} />
-      ${isQ3WithImages ? `<img class="choice-thumb" src="${Q3_OPTION_IMAGES[idx]}" alt="${opt.replace(/\"/g, '&quot;')}" />` : ''}
+      <input type="radio" name="opt" value="${idx}" ${idx===selected?'checked':''} ${waitingForPresenter?'disabled':''} />
+      ${isQ3WithImages ? `<img class="choice-thumb" src="${Q3_OPTION_IMAGES[idx===1 ? 2 : idx===2 ? 1 : idx]}" alt="${opt.replace(/\"/g, '&quot;')}" />` : ''}
       <div>${opt}</div>
     </label>`).join('');
   screen.innerHTML = `
@@ -812,7 +1134,8 @@ function renderQuestion(i){
       <div class="qtext" style="font-weight:600">${q.text}</div>
       ${sessionMode==='presenter'
         ? `<p class="small" style="margin-top:10px">Presenter view: participants answer on their devices. Use Next/Back to control progression in this round.</p>
-           <p class="small" style="margin-top:6px"><strong>Note:</strong> Starting a presenter session clears prior standings for a fresh ranking board.</p>`
+           <p class="small" style="margin-top:6px"><strong>Note:</strong> Starting a presenter session clears prior standings for a fresh ranking board.</p>
+           <div class="answer-fact-card small" style="line-height:1.5"><strong>Correct answer:</strong> ${correctAnswerText}</div>`
         : `<form id="form" class="choices" onsubmit="event.preventDefault()">${opts}</form>`
       }
       ${sessionMode==='presenter'
@@ -821,13 +1144,20 @@ function renderQuestion(i){
             <button onclick="next()">${i===total-1?'Finish':'Next'}</button>
           </div>
           <div id="syncedQuestionStats" class="synced-score-callout" style="display:${showSyncedStats?'block':'none'}">${syncedStatsText}</div>`
+        : waitingForPresenter
+          ? `<div class="controls">
+              <button onclick="submitParticipantAnswer()" disabled>Submit</button>
+              <span class="small" style="align-self:center"><strong>Waiting for presenter…</strong> Participants will sync automatically once a presenter starts.</span>
+            </div>
+            <div id="syncedQuestionStats" class="synced-score-callout" style="display:none"></div>
+            <p class="small" style="margin-top:8px">You cannot advance questions in Participant mode until a presenter is selected.</p>`
         : isFollowingPresenter
           ? `<div class="controls">
               <button onclick="submitParticipantAnswer()" ${hasSubmitted?'disabled':''}>${hasSubmitted?'Submitted':'Submit'}</button>
               <span class="small" style="align-self:center">scroll down for details</span>
             </div>
             <div id="syncedQuestionStats" class="synced-score-callout" style="display:${showSyncedStats?'block':'none'}">${syncedStatsText}</div>
-            ${feedback ? `<div class="feedback-banner ${feedback.isCorrect?'feedback-correct':'feedback-wrong'}"><span class="label">${feedback.isCorrect?'Correct!':'Not Quite!'}</span>${feedback.message}</div><div class="answer-fact-card small" style="line-height:1.5"><strong>${answerLabelText}:</strong> ${correctAnswerText}<br/><strong>Fun fact:</strong> ${funFactText}</div>` : ''}
+            ${feedback ? `<div class="feedback-banner ${feedback.isCorrect?'feedback-correct':'feedback-wrong'}"><span class="label">${feedback.isCorrect?'Correct!':'Not Quite!'}</span>${feedback.message}</div><div class="answer-fact-card small" style="line-height:1.5"><strong>${answerLabelText}:</strong> ${correctAnswerText}</div>` : ''}
             <p class="small" style="margin-top:8px">Your answer is locked in after submit. The presenter will advance everyone to the next question.</p>`
           : `<div class="controls">
               <button class="secondary" onclick="prev()" ${i===0?'disabled':''}>Back</button>
@@ -836,13 +1166,14 @@ function renderQuestion(i){
               <button onclick="next()">${i===total-1?'Finish':'Next'}</button>
             </div>
             <div id="syncedQuestionStats" class="synced-score-callout" style="display:${showSyncedStats?'block':'none'}">${syncedStatsText}</div>
-            ${feedback ? `<div class="feedback-banner ${feedback.isCorrect?'feedback-correct':'feedback-wrong'}"><span class="label">${feedback.isCorrect?'Correct!':'Not Quite!'}</span>${feedback.message}</div><div class="answer-fact-card small" style="line-height:1.5"><strong>${answerLabelText}:</strong> ${correctAnswerText}<br/><strong>Fun fact:</strong> ${funFactText}</div>` : ''}
+            ${feedback ? `<div class="feedback-banner ${feedback.isCorrect?'feedback-correct':'feedback-wrong'}"><span class="label">${feedback.isCorrect?'Correct!':'Not Quite!'}</span>${feedback.message}</div><div class="answer-fact-card small" style="line-height:1.5"><strong>${answerLabelText}:</strong> ${correctAnswerText}</div>` : ''}
             <p class="small" style="margin-top:8px">Offline mode: submit each answer, then use Next to continue.</p>`
       }
     </div>`;
   if(sessionMode === 'participant'){
     screen.querySelectorAll('.choice').forEach((el)=>{
       el.addEventListener('keydown', e=>{
+        if(waitingForPresenter) return;
         if(e.key===' '||e.key==='Enter'){ e.preventDefault(); el.querySelector('input').checked = true; }
       });
     });
@@ -871,6 +1202,10 @@ function saveAnswer(){
 }
 function submitParticipantAnswer(){
   if(sessionMode !== 'participant' || !isQuestionPhase()) return;
+  if(!hasActivePresenter()){
+    alert('Waiting for presenter. You can submit after a presenter starts the session.');
+    return;
+  }
   if(answered[current] != null) return;
   const radios = screen.querySelectorAll('input[name="opt"]');
   let sel = -1; radios.forEach(r=>{ if(r.checked) sel = parseInt(r.value,10); });
@@ -886,7 +1221,7 @@ function submitParticipantAnswer(){
   renderQuestion(current);
 }
 function next(){
-  if(sessionMode === 'participant' && realtimeEnabled && hasActivePresenter()) return;
+  if(sessionMode === 'participant') return;
   if(current < ROUND1_COUNT-1){
     current++;
     renderQuestion(current);
@@ -898,7 +1233,7 @@ function next(){
   pushPresenterState(true);
 }
 function prev(){
-  if(sessionMode === 'participant' && realtimeEnabled && hasActivePresenter()) return;
+  if(sessionMode === 'participant') return;
   if(current > 0){
     current--;
     renderQuestion(current);
@@ -906,6 +1241,7 @@ function prev(){
   }
 }
 function renderEnd(){
+  setPresentationShell(false);
   phase = PHASE_FINAL;
   if(sessionMode === 'participant'){
     recalcScore();
@@ -923,10 +1259,8 @@ function renderEnd(){
   screen.innerHTML = `
     <div class="center">
       ${renderBanner(total-1)}
-      ${sessionMode==='participant' ? `<h3>Final Score: ${score}/${total}</h3><p class="small">${msg}</p>` : `<h3>Presenter Dashboard</h3><p class="small">Quiz complete. Overall standings are shown below.</p>`}
-      <div class="controls" style="justify-content:center">
-        <button class="secondary" onclick="retake()">Retake</button>
-      </div>
+      ${sessionMode==='participant' ? `<h3>Final Score: ${score}/${total}</h3><p class="small">${msg}</p>` : sessionMode==='presentation' ? `<h3>Presentation View</h3><p class="small">Read-only room display. Waiting for next run.</p>` : `<h3>Presenter Dashboard</h3><p class="small">Quiz complete. Overall standings are shown below.</p>`}
+      ${sessionMode==='presentation' ? '' : `<div class="controls" style="justify-content:center"><button class="secondary" onclick="retake()">Retake</button></div>`}
       <p class="small" style="margin-top:10px">
         ${resultsFormUrl ? `Or <a href="${resultsFormUrl}" target="_blank" rel="noopener">open the Results Form</a> and paste.` : ``}
       </p>
@@ -990,16 +1324,24 @@ function retake(){
   usedWrongMessageIdx.clear();
   rightEncoreCounter = 0;
   wrongEncoreCounter = 0;
+  isPresentationReady = false;
   renderLanding();
   updateHeader();
 }
 async function startQuiz(){
   stopLandingPresenterWatch();
-  const n = document.getElementById('nameIn').value.trim();
   const selectedMode = document.getElementById('modeIn').value;
-  if(!n){ alert('Please enter your Name or Alias to continue.'); return; }
+  const n = document.getElementById('nameIn').value.trim();
+  if(selectedMode === 'participant' && !n){
+    alert('Please enter your Name or Alias to continue.');
+    return;
+  }
   participantId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  nameVal = n;
+  nameVal = selectedMode === 'participant'
+    ? n
+    : selectedMode === 'presentation'
+      ? 'Presentation Screen'
+      : 'Presenter Screen';
   aliasVal = '';
   sessionMode = selectedMode;
   phase = PHASE_ROUND1;
@@ -1027,6 +1369,19 @@ async function startQuiz(){
     return;
   }
 
+  if(sessionMode === 'presentation'){
+    current = 0;
+    realtimeEnabled = await initRealtime();
+    if(!realtimeEnabled || !isPresentationReady){
+      sessionMode = 'participant';
+      renderLanding();
+      return;
+    }
+    if(sharedState) applyPresentationState();
+    else renderPresentationView(current);
+    return;
+  }
+
   current = 0;
   realtimeEnabled = await initRealtime();
   renderQuestion(current);
@@ -1038,6 +1393,8 @@ async function startQuiz(){
     applyParticipantState();
   }
 }
+/* Cleanup tokens if tab/window is closed */
+window.addEventListener('beforeunload', () => { destroyRealtime(); });
 /* init */
 renderLanding(); updateHeader();
 if(restoreSessionState()){

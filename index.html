@@ -112,8 +112,9 @@ const QUESTIONS = [
   { text: "What behaviors or practices reduce trust in your team?" },
   { text: "What behaviors or practices reduce resilience during change?" }
 ];
-
-
+const ROUND1_COUNT = QUESTIONS.length;
+const PHASE_ROUND1 = 'round1';
+const PHASE_FINAL = 'final';
 
 let score = 0;
 let answered = []; // selected option indexes (absolute index across all rounds)

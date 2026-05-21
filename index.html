@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
@@ -116,8 +116,10 @@ const ROUND1_COUNT = QUESTIONS.length;
 const total = QUESTIONS.length;
 const PHASE_ROUND1 = 'round1';
 const PHASE_FINAL = 'final';
+const PHASE_LOBBY = 'lobby';
 
 let score = 0;
+let qrCodeDataUrl = '';
 let answered = []; // selected option indexes (absolute index across all rounds)
 let nameVal = "", aliasVal = "";
 let resultsFormUrl = ""; // optional: paste a Microsoft Form (Anyone can respond) link if you want
@@ -146,6 +148,10 @@ let participantFeedback = {};
 let lastRemoteCurrent = -1;
 let lastRemoteEnded = false;
 let lastRemotePhase = '';
+let lastPresentationCurrent = -1;
+let lastPresentationPhase = '';
+let lastPresentationResultsCount = -1;
+let lastPresentationQr = '';
 let realtimeEnabled = true;
 let isPresentationReady = false;
 const SESSION_STORAGE_KEY = 'mardi-gras-quiz-session-v1';
@@ -198,7 +204,7 @@ function restoreSessionState(){
     const state = JSON.parse(raw);
     if(!state || typeof state !== 'object') return false;
     if(!state.nameVal || typeof state.nameVal !== 'string') return false;
-    /* Always go back to landing for presenter — token must be re-claimed */
+    /* Always go back to landing for presenter â€” token must be re-claimed */
     if(state.sessionMode === 'presenter') return false;
 
     nameVal = state.nameVal;
@@ -245,6 +251,10 @@ async function resumeRealtimeAfterRestore(){
   lastRemoteCurrent = -1;
   lastRemoteEnded = sharedState.get('ended') === true;
   lastRemotePhase = '';
+  lastPresentationCurrent = -1;
+  lastPresentationPhase = '';
+  lastPresentationResultsCount = -1;
+  lastPresentationQr = '';
 
   if(hasActivePresenter()){
     if(sessionMode === 'participant') applyParticipantState();
@@ -266,9 +276,9 @@ async function resumeRealtimeAfterRestore(){
 /*** ====== HELPERS ====== ***/
 function modeText(){
   if(!realtimeEnabled) return 'Offline mode (local quiz only)';
-  if(sessionMode === 'presenter') return `Presenter mode (controls progression) • Sync: ${realtimeTransport}`;
-  if(sessionMode === 'presentation') return `Presentation view • Sync: ${realtimeTransport}`;
-  return `Participant mode (follows presenter) • Sync: ${realtimeTransport}`;
+  if(sessionMode === 'presenter') return `Presenter mode (controls progression) â€¢ Sync: ${realtimeTransport}`;
+  if(sessionMode === 'presentation') return `Presentation view â€¢ Sync: ${realtimeTransport}`;
+  return `Participant mode (follows presenter) â€¢ Sync: ${realtimeTransport}`;
 }
 function setPresentationShell(enabled){
   const wrap = document.querySelector('.wrap');
@@ -286,16 +296,23 @@ function renderBanner(index = 0){
 function updateHeader(){
   const idx = Math.max(0,current+1);
   let pct = 0;
+  if(phase === PHASE_LOBBY){
+    pct = 0;
+    tagQ.textContent = sessionMode === 'presentation' ? 'Display \u2022 Lobby' : 'Lobby';
+    bar.style.width = '0%';
+    tagScore.style.display = 'none';
+    return;
+  }
   if(phase === PHASE_ROUND1){
     pct = current < 0 ? 0 : Math.round(((idx)/total)*100);
     if(sessionMode === 'presentation'){
-      tagQ.textContent = current < 0 ? `Display • Q 0/${ROUND1_COUNT}` : `Display • Q ${current+1}/${ROUND1_COUNT}`;
+      tagQ.textContent = current < 0 ? `Display â€¢ Q 0/${ROUND1_COUNT}` : `Display â€¢ Q ${current+1}/${ROUND1_COUNT}`;
     } else {
       tagQ.textContent = current < 0 ? `Q 0/${ROUND1_COUNT}` : `Q ${current+1}/${ROUND1_COUNT}`;
     }
   } else {
     pct = 100;
-    tagQ.textContent = sessionMode === 'presentation' ? 'Display • Final Standings' : 'Final Standings';
+    tagQ.textContent = sessionMode === 'presentation' ? 'Display â€¢ Final Standings' : 'Final Standings';
   }
   bar.style.width = pct + '%';
   if(sessionMode === 'presenter' || sessionMode === 'presentation'){
@@ -371,7 +388,7 @@ function applyLandingPresenterAvailability(){
     landingPresenterActive = presenterActive;
     presenterOption.disabled = presenterActive;
     presenterOption.textContent = presenterActive
-    ? 'Presenter (controls everyone) — unavailable'
+    ? 'Presenter (controls everyone) â€” unavailable'
     : 'Presenter (controls everyone)';
     if(presenterActive && modeIn.value === 'presenter') modeIn.value = 'participant';
   }
@@ -507,7 +524,7 @@ function createFirebaseSharedState(){
   };
 }
 function pushPresenterState(isEnded = false){
-  if(sessionMode !== 'presenter' || !sharedState) return;
+  if(sessionMode !== 'presentation' || !sharedState) return;
   if(firebaseFns && firebaseStateRef){
     const updates = {};
     updates['phase'] = phase;
@@ -523,7 +540,7 @@ function publishMyTally(){
   const payload = {
     id: participantId,
     name: nameVal,
-    answers: Array.from({ length: total }, (_, idx) => answered[idx] != null ? answered[idx] : null),
+    answers: Array.from({ length: total }, (_, idx) => Array.isArray(answered[idx]) ? answered[idx] : []),
     rightOverall: score,
     totalOverall: total,
     mode: sessionMode,
@@ -550,12 +567,13 @@ function getSyncedQuestionStats(index){
   let submitted = 0;
   getSharedResults().forEach((result)=>{
     const picks = Array.isArray(result.answers) ? result.answers : [];
-    if(picks[index] != null) submitted++;
+    const slot = picks[index];
+    if(Array.isArray(slot) ? slot.length > 0 : slot != null) submitted++;
   });
   return { submitted };
 }
 function getSyncedOptionDistribution(index){
-  // Kept as stub for compatibility — word cloud replaces pie chart
+  // Kept as stub for compatibility â€” word cloud replaces pie chart
   return { counts: [], submitted: getSyncedQuestionStats(index).submitted };
 }
 function renderTalliesHtml(){
@@ -563,7 +581,7 @@ function renderTalliesHtml(){
   if(!tallies.length) return '<p class="small">No responses yet.</p>';
   return `
     <ol class="small" style="text-align:left;margin-top:8px">
-      ${tallies.map(t => `<li><strong>${t.name}</strong> — ${t.rightOverall}/${t.totalOverall} responded</li>`).join('')}
+      ${tallies.map(t => `<li><strong>${t.name}</strong> â€” ${t.rightOverall}/${t.totalOverall} responded</li>`).join('')}
     </ol>`;
 }
 function renderResponseTickerHtml(qIndex){
@@ -571,10 +589,13 @@ function renderResponseTickerHtml(qIndex){
   const responses = [];
   results.forEach(r => {
     const picks = Array.isArray(r.answers) ? r.answers : [];
-    const text = picks[qIndex];
-    if(text && typeof text === 'string') responses.push({ name: r.name, text });
+    const slot = picks[qIndex];
+    const texts = Array.isArray(slot) ? slot : (slot && typeof slot === 'string' ? [slot] : []);
+    texts.forEach(text => {
+      if(text && typeof text === 'string') responses.push({ name: r.name, text });
+    });
   });
-  if(!responses.length) return '<p class="small">No responses yet — waiting for participants…</p>';
+  if(!responses.length) return '<p class="small">No responses yet â€” waiting for participantsâ€¦</p>';
   return responses.map(r => {
     const chars = r.name.length + r.text.length + 2;
     const dur = Math.max(8, chars * 0.07).toFixed(1);
@@ -591,14 +612,17 @@ function buildWordFrequency(qIndex){
   const freq = {};
   getSharedResults().forEach(r => {
     const picks = Array.isArray(r.answers) ? r.answers : [];
-    const text = picks[qIndex];
-    if(!text || typeof text !== 'string') return;
-    const words = text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !STOP_WORDS.has(w));
-    words.forEach(w => { freq[w] = (freq[w] || 0) + 1; });
-    for(let i = 0; i < words.length - 1; i++){
-      const bigram = words[i] + ' ' + words[i+1];
-      freq[bigram] = (freq[bigram] || 0) + 0.5;
-    }
+    const slot = picks[qIndex];
+    const texts = Array.isArray(slot) ? slot : (slot && typeof slot === 'string' ? [slot] : []);
+    texts.forEach(text => {
+      if(!text || typeof text !== 'string') return;
+      const words = text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !STOP_WORDS.has(w));
+      words.forEach(w => { freq[w] = (freq[w] || 0) + 1; });
+      for(let i = 0; i < words.length - 1; i++){
+        const bigram = words[i] + ' ' + words[i+1];
+        freq[bigram] = (freq[bigram] || 0) + 0.5;
+      }
+    });
   });
   return Object.entries(freq).sort((a,b) => b[1]-a[1]);
 }
@@ -625,7 +649,7 @@ function renderPresentationView(index = 0, showFinal = false){
   const question = QUESTIONS[safeIndex];
   const waitingText = hasActivePresenter()
     ? ''
-    : '<p class="small" style="margin-top:10px"><strong>Waiting for presenter…</strong> This screen updates automatically when a presenter is active.</p>';
+    : '<p class="small" style="margin-top:10px"><strong>Waiting for presenterâ€¦</strong> This screen updates automatically when a presenter is active.</p>';
 
   if(showFinal || phase === PHASE_FINAL){
     screen.innerHTML = `
@@ -654,7 +678,7 @@ function renderPresentationView(index = 0, showFinal = false){
         </div>
         <div class="presentation-panel">
           ${renderBanner(safeIndex)}
-          <div class="small" style="margin-bottom:4px"><strong>${nameVal}</strong> &nbsp;•&nbsp; ${modeText()}</div>
+          <div class="small" style="margin-bottom:4px"><strong>${nameVal}</strong> &nbsp;â€¢&nbsp; ${modeText()}</div>
           <div class="qtext" style="font-weight:600;margin-top:6px">${question.text}</div>
           ${waitingText}
           <div class="synced-score-callout" style="margin-top:8px">${syncedQuestionStatsLabel(safeIndex)}</div>
@@ -687,7 +711,12 @@ function applyParticipantState(){
       renderEnd();
       return;
     }
+    if(phase === PHASE_LOBBY){
+      renderParticipantLobby();
+      return;
+    }
   }
+  if(phase === PHASE_LOBBY) return;
   if(typeof remoteCurrent === 'number' && remoteCurrent >= 0 && remoteCurrent < total && (remoteCurrent !== lastRemoteCurrent || phaseChanged)){
     lastRemoteCurrent = remoteCurrent;
     current = remoteCurrent;
@@ -700,21 +729,49 @@ function applyPresentationState(){
   const remotePhase = sharedState.get('phase') || PHASE_ROUND1;
   const ended = sharedState.get('ended') === true;
   const remoteCurrent = sharedState.get('current');
-  if(typeof remoteCurrent === 'number' && remoteCurrent >= 0 && remoteCurrent < ROUND1_COUNT){
-    current = remoteCurrent;
-  }
-  phase = ended ? PHASE_FINAL : remotePhase;
-  if(phase === PHASE_FINAL){
-    renderPresentationView(current, true);
+  const newCurrent = (typeof remoteCurrent === 'number' && remoteCurrent >= 0 && remoteCurrent < ROUND1_COUNT) ? remoteCurrent : current;
+  const newPhase = ended ? PHASE_FINAL : remotePhase;
+
+  const resultsFingerprint = getSharedResults().reduce((sum, r) => {
+    const picks = Array.isArray(r.answers) ? r.answers : [];
+    return sum + picks.reduce((s, slot) => s + (Array.isArray(slot) ? slot.length : (slot ? 1 : 0)), 0);
+  }, 0);
+
+  const remoteQr = sharedState ? (sharedState.get('qrCodeDataUrl') || '') : '';
+  const stateChanged = newPhase !== lastPresentationPhase || newCurrent !== lastPresentationCurrent || remoteQr !== lastPresentationQr;
+  const resultsChanged = resultsFingerprint !== lastPresentationResultsCount;
+
+  if(!stateChanged && !resultsChanged) return;
+
+  current = newCurrent;
+  phase = newPhase;
+
+  if(stateChanged){
+    lastPresentationPhase = newPhase;
+    lastPresentationCurrent = newCurrent;
+    lastPresentationResultsCount = resultsFingerprint;
+    lastPresentationQr = remoteQr;
+    if(phase === PHASE_FINAL){
+      renderPresentationView(current, true);
+      return;
+    }
+    if(phase === PHASE_LOBBY){
+      renderPresentationLobby();
+      return;
+    }
+    renderPresentationView(current);
     return;
   }
-  renderPresentationView(current);
+  if(phase === PHASE_LOBBY) return;
+
+  // Only results changed â€” update ticker and word cloud without full re-render
+  lastPresentationResultsCount = resultsFingerprint;
+  const tickerPanel = document.getElementById('tickerPanel');
+  if(tickerPanel) tickerPanel.innerHTML = renderResponseTickerHtml(current);
+  renderWordCloud(current);
 }
 function hasActivePresenter(){
-  if(!sharedState) return false;
-  const token = sharedState.get('presenterToken');
-  const heartbeat = sharedState.get('presenterHeartbeat') || 0;
-  return !!token && (Date.now() - heartbeat) < 10000;
+  return hasActivePresentation();
 }
 function hasActivePresentation(){
   if(!sharedState) return false;
@@ -782,7 +839,7 @@ async function initRealtime(){
       const result = await firebaseFns.runTransaction(tokenRef, (currentToken) => {
         const hb = sharedState.get('presenterHeartbeat') || 0;
         if(currentToken && (Date.now() - hb) < 10000){
-          return; /* abort — another presenter is active */
+          return; /* abort â€” another presenter is active */
         }
         return presenterToken;
       });
@@ -806,7 +863,7 @@ async function initRealtime(){
       firebaseFns.onDisconnect(firebaseFns.child(firebaseStateRef,'presenterToken')).remove().catch(()=>{});
       firebaseFns.onDisconnect(firebaseFns.child(firebaseStateRef,'presenterHeartbeat')).set(0).catch(()=>{});
     }
-    const isNewQuizPresentation = phase === PHASE_ROUND1
+    const isNewQuizPresentation = (phase === PHASE_ROUND1 || phase === PHASE_LOBBY)
       && current === 0
       && score === 0
       && Array.isArray(answered)
@@ -816,7 +873,7 @@ async function initRealtime(){
       sharedState.replaceResults({});
     }
     if(firebaseFns && firebaseStateRef){
-      const updates = { phase, ended: false, current, updatedAt: Date.now() };
+      const updates = { phase, ended: false, current, qrCodeDataUrl: '', updatedAt: Date.now() };
       await firebaseFns.update(firebaseStateRef, updates).catch(e => console.error('Firebase update error:', e));
     }
     presenterHeartbeatTimer = setInterval(()=>{
@@ -905,7 +962,12 @@ async function forceResetAll(){
   lastRemoteCurrent = -1;
   lastRemoteEnded = false;
   lastRemotePhase = '';
+  lastPresentationCurrent = -1;
+  lastPresentationPhase = '';
+  lastPresentationResultsCount = -1;
+  lastPresentationQr = '';
   isPresentationReady = false;
+  qrCodeDataUrl = '';
   try{
     if(await loadRealtimeLibs()){
       const sessionRef = firebaseFns.ref(firebaseDb, `sessions/${PUBLIC_ROOM_ID}`);
@@ -922,6 +984,79 @@ async function forceResetAll(){
   renderLanding();
   updateHeader();
 }
+function renderPresenterLobby(){
+  setPresentationShell(false);
+  const qrSection = qrCodeDataUrl
+    ? `<div style="text-align:center;margin-top:12px">
+        <img src="${qrCodeDataUrl}" alt="QR Code" style="max-width:min(420px,80vw);max-height:58vh;border-radius:12px;border:1px solid #eadfbf;box-shadow:0 4px 18px rgba(0,0,0,.14)" />
+        <div style="margin-top:10px">
+          <label style="cursor:pointer;display:inline-block;padding:8px 16px;border-radius:10px;border:1px solid #c9b98a;background:#fff;font-size:.9rem;font-weight:600">
+            Change QR Code
+            <input type="file" accept="image/*" style="display:none" onchange="uploadQrCode(event)"/>
+          </label>
+        </div>
+      </div>`
+    : `<div style="text-align:center;margin-top:20px">
+        <label style="cursor:pointer;display:inline-flex;flex-direction:column;align-items:center;gap:10px;padding:28px 40px;border-radius:16px;border:2px dashed #c9b98a;background:#fffdf7;transition:border-color .2s">
+          <span style="font-size:3rem">&#128247;</span>
+          <span style="font-weight:700;color:#6a1b9a;font-size:1.05rem">Upload QR Code</span>
+          <span class="small">Tap to choose an image</span>
+          <input type="file" accept="image/*" style="display:none" onchange="uploadQrCode(event)"/>
+        </label>
+      </div>`;
+  screen.innerHTML = `
+    <div>
+      <div class="small" style="margin-bottom:6px"><strong>${nameVal}</strong> &nbsp;\u2022&nbsp; ${modeText()}</div>
+      <p class="small" style="margin-top:0">Share the link or QR code with participants, then click <strong>Start Questions</strong> when ready.</p>
+      ${qrSection}
+      <div class="controls" style="margin-top:18px;justify-content:flex-end">
+        <button onclick="startQuestions()">Start Questions &#9654;</button>
+      </div>
+    </div>`;
+  updateHeader();
+}
+function uploadQrCode(event){
+  const file = event.target.files && event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    qrCodeDataUrl = e.target.result;
+    if(realtimeEnabled && sharedState) sharedState.set('qrCodeDataUrl', qrCodeDataUrl);
+    renderPresenterLobby();
+  };
+  reader.readAsDataURL(file);
+}
+function startQuestions(){
+  phase = PHASE_ROUND1;
+  current = 0;
+  renderQuestion(current);
+  pushPresenterState(false);
+}
+function renderParticipantLobby(){
+  setPresentationShell(false);
+  screen.innerHTML = `
+    <div class="center" style="padding:40px 16px">
+      <div style="font-size:3rem;margin-bottom:14px">&#9200;</div>
+      <h3 style="margin:0 0 10px">Waiting for the presenter to start&hellip;</h3>
+      <p class="small">The presenter will begin the questions shortly.<br>You&rsquo;ll be taken there automatically.</p>
+    </div>`;
+  updateHeader();
+  saveSessionState();
+}
+function renderPresentationLobby(){
+  setPresentationShell(false);
+  const remoteQr = sharedState ? (sharedState.get('qrCodeDataUrl') || '') : '';
+  const qrHtml = remoteQr
+    ? `<img src="${remoteQr}" alt="QR Code" style="max-width:min(480px,85vw);max-height:65vh;border-radius:12px;border:1px solid #eadfbf;box-shadow:0 4px 18px rgba(0,0,0,.14);margin-bottom:12px" />`
+    : `<p class="small" style="margin-top:0">Waiting for presenter to upload QR code&hellip;</p>`;
+  screen.innerHTML = `
+    <div class="center" style="padding:24px 16px">
+      ${qrHtml}
+      <h3 style="margin:8px 0 6px">Scan to join the session</h3>
+      <p class="small">${modeText()}</p>
+    </div>`;
+  updateHeader();
+}
 function renderLanding(){
   setPresentationShell(false);
   screen.innerHTML = `
@@ -936,7 +1071,7 @@ function renderLanding(){
         <div style="width:100%">
           <div class="small" style="margin:0 0 6px 2px">Mode</div>
           <select id="modeIn" onchange="handleLandingModeChange()" style="width:100%;padding:12px;border-radius:12px;border:1px solid #ddd">
-            <option value="presentation">Presentation View (optional — select first)</option>
+            <option value="presentation">Presentation View (optional â€” select first)</option>
             <option value="presenter">Presenter (controls everyone)</option>
             <option value="participant">Participant (follows presenter)</option>
           </select>
@@ -972,12 +1107,19 @@ function renderAbout(){
 function renderQuestion(i){
   setPresentationShell(false);
   const q = QUESTIONS[i];
-  const hasSubmitted = answered[i] != null;
+  const prevAnswers = Array.isArray(answered[i]) ? answered[i] : [];
+  const hasSubmitted = prevAnswers.length > 0;
   const hasPresenter = hasActivePresenter();
   const waitingForPresenter = sessionMode === 'participant' && !hasPresenter;
   const isFollowingPresenter = sessionMode === 'participant' && realtimeEnabled && hasActivePresenter();
   const showSyncedStats = shouldShowSyncedQuestionStats();
   const syncedStatsText = syncedQuestionStatsLabel(i);
+  const prevAnswersHtml = hasSubmitted
+    ? `<div class="answer-fact-card small" style="line-height:1.6;margin-top:10px">
+        <div style="font-weight:700;margin-bottom:4px">Your responses (${prevAnswers.length}):</div>
+        <ol style="margin:0;padding-left:18px">${prevAnswers.map(a => `<li><em>${a}</em></li>`).join('')}</ol>
+      </div>`
+    : '';
   screen.innerHTML = `
     <div>
       ${renderBanner(i)}
@@ -987,9 +1129,9 @@ function renderQuestion(i){
       ${sessionMode==='presenter'
         ? `<p class="small" style="margin-top:10px">Presenter view: participants answer on their devices. Use Next/Back to control progression in this round.</p>
            <p class="small" style="margin-top:6px"><strong>Note:</strong> Starting a presenter session clears prior standings for a fresh word cloud.</p>`
-        : hasSubmitted
-          ? `<div class="answer-fact-card small" style="line-height:1.5;margin-top:10px">✅ Your response: <em>${answered[i]}</em></div>`
-          : `<textarea id="responseIn" placeholder="Type your response…" rows="4" style="width:100%;padding:12px;border-radius:12px;border:1px solid #ddd;font-size:1rem;resize:vertical;margin-top:10px;box-sizing:border-box" ${waitingForPresenter?'disabled':''}></textarea>`
+        : `${prevAnswersHtml}
+           <p class="small" style="margin-top:8px;color:#6a1b9a;font-weight:600">You can respond as many times as you like â€” each response adds to the word cloud.</p>
+           <textarea id="responseIn" placeholder="Type a response and hit Submitâ€¦" rows="3" style="width:100%;padding:12px;border-radius:12px;border:1px solid #ddd;font-size:1rem;resize:vertical;margin-top:6px;box-sizing:border-box" ${waitingForPresenter?'disabled':''}></textarea>`
       }
       ${sessionMode==='presenter'
         ? `<div class="controls">
@@ -1000,18 +1142,18 @@ function renderQuestion(i){
         : waitingForPresenter
           ? `<div class="controls">
               <button onclick="submitParticipantAnswer()" disabled>Submit</button>
-              <span class="small" style="align-self:center"><strong>Waiting for presenter…</strong> You will sync automatically once a presenter starts.</span>
+              <span class="small" style="align-self:center"><strong>Waiting for presenterâ€¦</strong> You will sync automatically once a presenter starts.</span>
             </div>
             <div id="syncedQuestionStats" class="synced-score-callout" style="display:none"></div>`
         : isFollowingPresenter
           ? `<div class="controls">
-              <button onclick="submitParticipantAnswer()" ${hasSubmitted?'disabled':''}>${hasSubmitted?'Submitted':'Submit'}</button>
+              <button onclick="submitParticipantAnswer()">Submit</button>
               <span class="small" style="align-self:center">The presenter will advance to the next question.</span>
             </div>
             <div id="syncedQuestionStats" class="synced-score-callout" style="display:${showSyncedStats?'block':'none'}">${syncedStatsText}</div>`
           : `<div class="controls">
               <button class="secondary" onclick="prev()" ${i===0?'disabled':''}>Back</button>
-              <button onclick="submitParticipantAnswer()" ${hasSubmitted?'disabled':''}>${hasSubmitted?'Submitted':'Submit'}</button>
+              <button onclick="submitParticipantAnswer()">Submit</button>
               <button onclick="next()">${i===total-1?'Finish':'Next'}</button>
             </div>
             <div id="syncedQuestionStats" class="synced-score-callout" style="display:${showSyncedStats?'block':'none'}">${syncedStatsText}</div>
@@ -1023,10 +1165,10 @@ function renderQuestion(i){
   saveSessionState();
 }
 function recalcScore(){
-  score = answered.filter(a => a != null).length;
+  score = answered.filter(a => Array.isArray(a) ? a.length > 0 : a != null).length;
 }
 function saveAnswer(){
-  // Not used in survey mode — offline answer capture handled by submitParticipantAnswer
+  // Not used in survey mode â€” offline answer capture handled by submitParticipantAnswer
   return false;
 }
 function submitParticipantAnswer(){
@@ -1035,11 +1177,11 @@ function submitParticipantAnswer(){
     alert('Waiting for presenter. You can submit after a presenter starts the session.');
     return;
   }
-  if(answered[current] != null) return;
   const textarea = document.getElementById('responseIn');
   const val = textarea ? textarea.value.trim() : '';
   if(!val){ alert('Please type a response before submitting.'); return; }
-  answered[current] = val;
+  if(!Array.isArray(answered[current])) answered[current] = [];
+  answered[current].push(val);
   recalcScore();
   publishMyTally();
   renderQuestion(current);
@@ -1087,8 +1229,8 @@ function renderEnd(){
       <details style="margin-top:10px"><summary class="small">Review your responses</summary>
         <ol class="small" style="text-align:left;margin-top:8px">
           ${QUESTIONS.map((q,i)=> {
-            const pick = answered[i];
-            return `<li><strong>Q${i+1}:</strong> ${q.text}<div><em>${pick != null ? pick : '(not answered)'}</em></div></li>`;
+            const picks = Array.isArray(answered[i]) ? answered[i] : (answered[i] ? [answered[i]] : []);
+            return `<li><strong>Q${i+1}:</strong> ${q.text}<div>${picks.length > 0 ? picks.map(p => `<em>${p}</em>`).join('<br>') : '<em>(not answered)</em>'}</div></li>`;
           }).join('')}
         </ol>
       </details>
@@ -1099,7 +1241,7 @@ function renderEnd(){
 function copyResults(){
   const summary = {
     name:nameVal, alias:aliasVal, responded: score, total,
-    answers: QUESTIONS.map((q,i)=>({ q:i+1, response: answered[i] != null ? answered[i] : null }))
+    answers: QUESTIONS.map((q,i)=>({ q:i+1, responses: Array.isArray(answered[i]) ? answered[i] : (answered[i] ? [answered[i]] : []) }))
   };
   const text = JSON.stringify(summary,null,2);
   if(navigator.clipboard && navigator.clipboard.writeText){
@@ -1136,7 +1278,12 @@ function retake(){
   lastRemoteCurrent = -1;
   lastRemoteEnded = false;
   lastRemotePhase = '';
+  lastPresentationCurrent = -1;
+  lastPresentationPhase = '';
+  lastPresentationResultsCount = -1;
+  lastPresentationQr = '';
   isPresentationReady = false;
+  qrCodeDataUrl = '';
   renderLanding();
   updateHeader();
 }
@@ -1163,9 +1310,15 @@ async function startQuiz(){
   lastRemoteCurrent = -1;
   lastRemoteEnded = false;
   lastRemotePhase = '';
+  lastPresentationCurrent = -1;
+  lastPresentationPhase = '';
+  lastPresentationResultsCount = -1;
+  lastPresentationQr = '';
 
   if(sessionMode === 'presenter'){
     current = 0;
+    phase = PHASE_LOBBY;
+    qrCodeDataUrl = '';
     realtimeEnabled = await initRealtime();
     if(!realtimeEnabled){
       alert('Presenter mode could not start because live sync is unavailable. Check internet or firewall access to Firebase, then try again.');
@@ -1173,7 +1326,7 @@ async function startQuiz(){
       renderLanding();
       return;
     }
-    renderQuestion(current);
+    renderPresenterLobby();
     pushPresenterState(false);
     return;
   }
@@ -1202,6 +1355,10 @@ async function startQuiz(){
     lastRemoteCurrent = -1;
     lastRemoteEnded = sharedState.get('ended') === true;
     lastRemotePhase = '';
+    lastPresentationCurrent = -1;
+    lastPresentationPhase = '';
+    lastPresentationResultsCount = -1;
+    lastPresentationQr = '';
     applyParticipantState();
   }
 }
@@ -1215,3 +1372,4 @@ if(restoreSessionState()){
 </script>
 </body>
 </html>
+

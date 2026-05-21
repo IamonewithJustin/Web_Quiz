@@ -235,6 +235,7 @@ async function refreshLandingAvailability(){
       : '';
     noteEl.style.display = isActive ? '' : 'none';
   }
+  if(btnEl) btnEl.style.display = isActive ? 'none' : '';
 }
 function startLandingStatusWatch(){
   stopLandingStatusWatch();
@@ -1006,8 +1007,6 @@ async function initRealtime(){
     sharedState.set('phase', PHASE_LOBBY);
     sharedState.set('ended', false);
     sharedState.set('current', 0);
-    const existingQr = sharedState.get('qrCodeDataUrl');
-    if(typeof existingQr === 'string') qrCodeDataUrl = existingQr;
     if(firebaseFns.onDisconnect){
       firebaseFns.onDisconnect(firebaseFns.child(firebaseStateRef,'presentationToken')).remove().catch(()=>{});
       firebaseFns.onDisconnect(firebaseFns.child(firebaseStateRef,'presentationHeartbeat')).set(0).catch(()=>{});
@@ -1072,11 +1071,26 @@ async function forceResetAll(){
 }
 function renderLanding(){
   setPresentationShell(false);
+  anonymousJoin = false;
   screen.innerHTML = `
     <div>
       ${renderBanner(0)}
-      <p class="small">Hosts run Presentation View. Participants scan the QR code, enter a name, or choose anonymous and join automatically once the host starts.</p>
+      <p class="small">Hosts run Presentation View. Participants scan the QR code and join automatically once the host starts.</p>
       <p id="landingAvailNote" class="small" style="display:none"></p>
+      <div class="controls" style="margin-top:14px">
+        <button class="secondary" onclick="renderAbout()">About</button>
+        <button id="startPresentationBtn" class="outline" onclick="startQuiz('presentation')">Start Presentation View</button>
+        <button onclick="renderParticipantJoin()">Join as Participant</button>
+      </div>
+    </div>`;
+  startLandingStatusWatch();
+  updateHeader();
+}
+function renderParticipantJoin(){
+  stopLandingStatusWatch();
+  screen.innerHTML = `
+    <div>
+      ${renderBanner(0)}
       <div class="row">
         <div style="width:100%">
           <div id="nameHint" class="small" style="margin:0 0 6px 2px">Name or Alias</div>
@@ -1084,21 +1098,16 @@ function renderLanding(){
         </div>
         <div style="width:100%">
           <label class="anonymous-toggle" for="anonymousIn">
-            <input id="anonymousIn" type="checkbox" onchange="toggleAnonymousJoin(this.checked)" ${anonymousJoin ? 'checked' : ''} />
+            <input id="anonymousIn" type="checkbox" onchange="toggleAnonymousJoin(this.checked)" />
             <span>Join anonymously</span>
           </label>
         </div>
       </div>
       <div class="controls" style="margin-top:14px">
-        <button class="secondary" onclick="renderAbout()">About</button>
-        <button id="startPresentationBtn" class="outline" onclick="startQuiz('presentation')">Start Presentation View</button>
-        <button onclick="startQuiz('participant')">Join as Participant</button>
+        <button class="secondary" onclick="renderLanding()">Back</button>
+        <button onclick="startQuiz('participant')">Join</button>
       </div>
     </div>`;
-  const nameIn = document.getElementById('nameIn');
-  if(nameIn) nameIn.value = anonymousJoin ? 'Anonymous' : (nameVal || '');
-  toggleAnonymousJoin(anonymousJoin);
-  startLandingStatusWatch();
   updateHeader();
 }
 function renderAbout(){
@@ -1209,8 +1218,8 @@ function saveAnswer(){
 }
 function submitParticipantAnswer(){
   if(sessionMode !== 'participant' || !isQuestionPhase()) return;
-  if(!hasActivePresentation()){
-    alert('Waiting for host. You can submit after Presentation View starts the session.');
+  if(!sharedState){
+    alert('Not connected to the session. Please go back and rejoin.');
     return;
   }
   const textarea = document.getElementById('responseIn');
@@ -1348,6 +1357,7 @@ async function startQuiz(mode = 'participant'){
 
   if(sessionMode === 'presentation'){
     current = 0;
+    qrCodeDataUrl = '';
     realtimeEnabled = await initRealtime();
     if(!realtimeEnabled){
       alert('Presentation View could not start because live sync is unavailable. Check internet or firewall access to Firebase, then try again.');

@@ -231,11 +231,10 @@ async function refreshLandingAvailability(){
   const btnEl  = document.getElementById('startPresentationBtn');
   if(noteEl){
     noteEl.innerHTML = isActive
-      ? '<strong>Presentation View is already active.</strong> Join as participant instead.'
+      ? '<strong>A Presentation View session is already active.</strong> Starting a new one will reset the room.'
       : '';
     noteEl.style.display = isActive ? '' : 'none';
   }
-  if(btnEl) btnEl.style.display = isActive ? 'none' : '';
 }
 function startLandingStatusWatch(){
   stopLandingStatusWatch();

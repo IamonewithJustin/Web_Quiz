@@ -122,8 +122,8 @@
 <script>
 /*** ====== SURVEY DATA ====== ***/
 const QUESTIONS = [
-  { text: "What behaviors or practices reduce trust in your team?" },
-  { text: "What behaviors or practices reduce resilience during change?" }
+  { text: "What behaviors or practices reduce trust in your team?", image: "assets/slide_images/q01.jpg" },
+  { text: "What behaviors or practices reduce resilience during change?", image: "assets/slide_images/q02.jpg" }
 ];
 const ROUND1_COUNT = QUESTIONS.length;
 const total = QUESTIONS.length;
@@ -354,7 +354,8 @@ function isQuestionPhase(){
   return phase === PHASE_ROUND1;
 }
 function renderBanner(index = 0){
-  return '';
+  if(index < 0 || index >= QUESTIONS.length || !QUESTIONS[index].image) return '';
+  return `<div class="slide-banner" style="background-image:url('${QUESTIONS[index].image}')"></div>`;
 }
 function updateHeader(){
   if(phase === PHASE_LOBBY){

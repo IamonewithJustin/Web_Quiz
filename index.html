@@ -102,6 +102,11 @@
   .response-list li{margin-bottom:6px;line-height:1.4}
   .pdf-export-root{position:fixed;left:-10000px;top:0;width:760px;background:#fff;color:#111;padding:0;z-index:-1}
   .pdf-export-page{width:760px;box-sizing:border-box;padding:24px;border-bottom:1px solid #ddd;background:#fff}
+  .reaction-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:12px;padding:8px 12px;background:rgba(106,27,154,.04);border-radius:10px;border:1px solid rgba(106,27,154,.12)}
+  .rxn-btn{background:#fff;border:1px solid #eadfbf;border-radius:999px;padding:5px 11px;font-size:1.4rem;cursor:pointer;box-shadow:none;line-height:1;color:inherit;min-width:0;transition:transform .12s,background .12s;width:auto}
+  .rxn-btn:active{transform:scale(.82);background:var(--muted)}
+  @keyframes rxn-float{0%{opacity:0;transform:translateY(0) scale(.4)}18%{opacity:1;transform:translateY(-40px) scale(1.5)}80%{opacity:.85;transform:translateY(-170px) scale(1.15)}100%{opacity:0;transform:translateY(-230px) scale(.9)}}
+  .rxn-float{position:fixed;pointer-events:none;font-size:4.5rem;animation:rxn-float 2.8s ease-out forwards;z-index:9999;user-select:none;filter:drop-shadow(0 4px 12px rgba(0,0,0,.35))}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/wordcloud@1.2.2/src/wordcloud2.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -157,6 +162,9 @@ let participantFeedback = {};
 let qrCodeDataUrl = '';
 let qrCodeFileName = '';
 let prevWordKeys = new Set();
+let lastReactionKeys = new Set();
+let presentationStartTime = 0;
+let reactionCooldown = false;
 let lastRemoteCurrent = -1;
 let lastRemoteEnded = false;
 let lastRemotePhase = '';
@@ -644,6 +652,23 @@ function spawnWordOverlays(newWords, container){
     setTimeout(() => { if(el.parentNode) el.parentNode.removeChild(el); }, 1800 + i * 200);
   });
 }
+function sendReaction(emoji){
+  if(!sharedState || !isQuestionPhase() || reactionCooldown) return;
+  reactionCooldown = true;
+  setTimeout(()=>{ reactionCooldown = false; }, 1500);
+  const key = `rxn:${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
+  sharedState.set(key, JSON.stringify({ emoji }));
+  setTimeout(()=>{ if(sharedState) sharedState.delete(key); }, 9000);
+}
+function spawnReactionOverlay(emoji){
+  const el = document.createElement('div');
+  el.className = 'rxn-float';
+  el.textContent = emoji;
+  el.style.left = `${8 + Math.random() * 78}%`;
+  el.style.bottom = '60px';
+  document.body.appendChild(el);
+  setTimeout(()=>{ if(el.parentNode) el.parentNode.removeChild(el); }, 2900);
+}
 function renderWordCloud(qIndex){
   const canvas = document.getElementById('wordCloudCanvas');
   if(!canvas) return;
@@ -926,6 +951,15 @@ function applyPresentationState(){
   const qrChanged = (sharedState.get('qrCodeDataUrl') || '') !== lastPresentationQr;
   const resultsChanged = resultsFingerprint !== lastPresentationResultsCount;
 
+  sharedState.forEach((value, key)=>{
+    if(typeof key !== 'string' || !key.startsWith('rxn:')) return;
+    const ts = parseInt(key.slice(4));
+    if(!isNaN(ts) && ts > presentationStartTime && !lastReactionKeys.has(key)){
+      lastReactionKeys.add(key);
+      try{ const r = typeof value === 'string' ? JSON.parse(value) : value; if(r && r.emoji) spawnReactionOverlay(r.emoji); }catch(e){}
+    }
+  });
+
   if(!stateChanged && !resultsChanged && !qrChanged) return;
 
   current = newCurrent;
@@ -1043,6 +1077,8 @@ async function initRealtime(){
     }
     // Sync token into local state immediately so hasActivePresentation() returns true
     sharedState.set('presentationToken', presentationToken);
+    presentationStartTime = Date.now();
+    lastReactionKeys = new Set();
     // Reset room for new session now that we hold the token
     await firebaseFns.remove(firebaseResultsRef).catch(e => console.error('Firebase reset error:', e));
     sharedState.replaceResults({});
@@ -1233,7 +1269,8 @@ function renderQuestion(i){
               <button onclick="submitParticipantAnswer()">Submit</button>
               <span class="small" style="align-self:center">The host will advance to the next question.</span>
             </div>
-            <div id="syncedQuestionStats" class="synced-score-callout" style="display:${showSyncedStats?'block':'none'}">${syncedStatsText}</div>`
+            <div id="syncedQuestionStats" class="synced-score-callout" style="display:${showSyncedStats?'block':'none'}">${syncedStatsText}</div>
+            <div class="reaction-bar"><span class="small" style="color:#888;font-size:.8rem;margin-right:2px">React:</span><button class="rxn-btn" onclick="sendReaction('👍')">👍</button><button class="rxn-btn" onclick="sendReaction('🔥')">🔥</button><button class="rxn-btn" onclick="sendReaction('💡')">💡</button><button class="rxn-btn" onclick="sendReaction('❤️')">❤️</button><button class="rxn-btn" onclick="sendReaction('🎉')">🎉</button></div>`
           : `<div class="controls">
               <button class="secondary" onclick="prev()" ${i===0?'disabled':''}>Back</button>
               <button onclick="submitParticipantAnswer()">Submit</button>

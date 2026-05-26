@@ -88,7 +88,9 @@
   .ticker-name { font-weight:700; min-width:80px; flex-shrink:0; font-size:.9rem; white-space:nowrap }
   .ticker-track { overflow:hidden; white-space:nowrap; flex:1 }
   .ticker-text { display:inline-block; animation: scroll-text linear infinite }
-  .wordcloud-wrap { width:100%; display:flex; align-items:center; justify-content:center; margin-top:12px }
+  .wordcloud-wrap { position:relative; width:100%; display:flex; align-items:center; justify-content:center; margin-top:12px }
+  @keyframes wc-word-arrive { 0%{opacity:0;transform:translate(-50%,-50%) scale(0.3)} 35%{opacity:1;transform:translate(-50%,-50%) scale(1.25)} 65%{opacity:1;transform:translate(-50%,-50%) scale(1)} 100%{opacity:0;transform:translate(-50%,-50%) scale(0.75) translateY(-28px)} }
+  .wc-fly-word{position:absolute;pointer-events:none;font-weight:900;white-space:nowrap;text-shadow:0 2px 8px rgba(0,0,0,.22);animation:wc-word-arrive 1.6s ease-out forwards;z-index:10}
   .wordcloud-wrap canvas { max-width:100%; border-radius:12px; background:#fafafa }
   .anonymous-toggle{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #eadfbf;border-radius:12px;background:#fff}
   .anonymous-toggle input{width:auto;margin:0}
@@ -122,8 +124,8 @@
 <script>
 /*** ====== SURVEY DATA ====== ***/
 const QUESTIONS = [
-  { text: "What behaviors or practices reduce trust in your team?", image: "assets/slide_images/q02.jpg" },
-  { text: "What behaviors or practices reduce resilience during change?", image: "assets/slide_images/q01.jpg" }
+  { text: "What behaviors or practices reduce trust in your team?" },
+  { text: "What behaviors or practices reduce resilience during change?" }
 ];
 const ROUND1_COUNT = QUESTIONS.length;
 const total = QUESTIONS.length;
@@ -154,6 +156,7 @@ let participantId = '';
 let participantFeedback = {};
 let qrCodeDataUrl = '';
 let qrCodeFileName = '';
+let prevWordKeys = new Set();
 let lastRemoteCurrent = -1;
 let lastRemoteEnded = false;
 let lastRemotePhase = '';
@@ -626,8 +629,37 @@ function renderWordCloudToCanvas(canvas, qIndex){
     minSize: 10
   });
 }
+function spawnWordOverlays(newWords, container){
+  const colors = ['#6b21a8','#15803d','#b45309','#1565c0','#ad1457'];
+  newWords.slice(0, 5).forEach((word, i) => {
+    const el = document.createElement('div');
+    el.className = 'wc-fly-word';
+    el.textContent = word;
+    el.style.color = colors[i % colors.length];
+    el.style.fontSize = `${Math.max(1.2, Math.min(2.4, 2.6 - word.length * 0.05))}rem`;
+    el.style.left = `${15 + Math.random() * 70}%`;
+    el.style.top = `${20 + Math.random() * 60}%`;
+    el.style.animationDelay = `${i * 0.18}s`;
+    container.appendChild(el);
+    setTimeout(() => { if(el.parentNode) el.parentNode.removeChild(el); }, 1800 + i * 200);
+  });
+}
 function renderWordCloud(qIndex){
-  renderWordCloudToCanvas(document.getElementById('wordCloudCanvas'), qIndex);
+  const canvas = document.getElementById('wordCloudCanvas');
+  if(!canvas) return;
+  const newFreq = buildWordFrequency(qIndex);
+  const currentKeys = new Set(newFreq.map(([w]) => w));
+  const newWords = newFreq.filter(([w]) => !prevWordKeys.has(w)).map(([w]) => w);
+  prevWordKeys = currentKeys;
+  const wrap = canvas.closest('.wordcloud-wrap');
+  if(wrap && newWords.length > 0) spawnWordOverlays(newWords, wrap);
+  canvas.style.transition = '';
+  canvas.style.opacity = '0.15';
+  renderWordCloudToCanvas(canvas, qIndex);
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    canvas.style.transition = 'opacity 0.7s ease';
+    canvas.style.opacity = '1';
+  }));
 }
 function renderQuestionResponsesHtml(qIndex){
   const responses = getQuestionResponses(qIndex);
@@ -781,6 +813,7 @@ function showQrOnly(){
 function renderPresentationView(index = 0, showFinal = false){
   stopLandingStatusWatch();
   setPresentationShell(true);
+  prevWordKeys = new Set();
   const safeIndex = (typeof index === 'number' && index >= 0 && index < ROUND1_COUNT) ? index : 0;
   current = safeIndex;
   const question = QUESTIONS[safeIndex];
@@ -1185,7 +1218,6 @@ function renderQuestion(i){
     : '';
   screen.innerHTML = `
     <div>
-      ${renderBanner(i)}
       <div class="qtext">${q.text}</div>
       ${prevAnswersHtml}
       <p class="small" style="margin-top:8px;color:#6a1b9a;font-weight:600">You can respond as many times as you like — each response adds to the word cloud.</p>

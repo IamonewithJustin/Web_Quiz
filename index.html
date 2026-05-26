@@ -44,8 +44,8 @@
   .feedback-correct{color:#fff;background:linear-gradient(135deg,var(--green),var(--purple));border-color:var(--green)}
   .feedback-wrong{color:#fff;background:linear-gradient(135deg,var(--purple),var(--gold));border-color:var(--gold)}
   .answer-fact-card{margin-top:10px;padding:12px 14px;border-radius:12px;border:1px solid #eadfbf;background:#fff;color:#111;font-weight:400}
-  .synced-score-callout{width:100%;box-sizing:border-box;margin-top:8px;padding:12px 14px;border-radius:12px;border:1px solid #000;background:#1b1b1b;color:#fff;font-size:1rem;font-weight:800;letter-spacing:.2px;box-shadow:0 4px 10px rgba(0,0,0,.24)}
-  .synced-score-label{font-weight:900;text-transform:uppercase;font-size:.78rem;letter-spacing:.8px;margin-right:8px;color:#fff}
+  .synced-score-callout{width:100%;box-sizing:border-box;margin-top:8px;padding:8px 14px;border-radius:10px;border:1px solid rgba(106,27,154,.25);background:rgba(106,27,154,.06);color:#3d0a5a;font-size:.92rem;font-weight:500;letter-spacing:.1px}
+  .synced-score-label{font-weight:600;font-size:.82rem;letter-spacing:.3px;margin-right:12px;color:#5a0f7a}
   .synced-correct{color:#58d68d}
   .synced-incorrect{color:#ff6b6b}
   .synced-value-correct{color:#7dff9f;font-weight:900;font-size:1.08rem}
@@ -395,7 +395,7 @@ function shouldShowSyncedQuestionStats(){
 }
 function syncedQuestionStatsLabel(index){
   const stats = getSyncedQuestionStats(index);
-  return `<span class="synced-score-label">Submitted: <strong>${stats.submitted}</strong></span>`;
+  return `<span class="synced-score-label">Responses: <strong>${stats.totalResponses}</strong></span><span class="synced-score-label">Submitters: <strong>${stats.submitters}</strong></span>`;
 }
 function updateSyncedQuestionStatsUI(){
   const el = document.getElementById('syncedQuestionStats');
@@ -542,18 +542,20 @@ function getSharedTallies(){
   return items.sort((a,b)=> (b.rightOverall - a.rightOverall));
 }
 function getSyncedQuestionStats(index){
-  if(index < 0 || index >= ROUND1_COUNT) return { submitted: 0 };
-  let submitted = 0;
+  if(index < 0 || index >= ROUND1_COUNT) return { submitters: 0, totalResponses: 0 };
+  let submitters = 0;
+  let totalResponses = 0;
   getSharedResults().forEach((result)=>{
     const picks = Array.isArray(result.answers) ? result.answers : [];
     const slot = picks[index];
-    if(Array.isArray(slot) ? slot.length > 0 : slot != null) submitted++;
+    const count = Array.isArray(slot) ? slot.length : (slot != null ? 1 : 0);
+    if(count > 0){ submitters++; totalResponses += count; }
   });
-  return { submitted };
+  return { submitters, totalResponses };
 }
 function getSyncedOptionDistribution(index){
   // Kept as stub for compatibility — word cloud replaces pie chart
-  return { counts: [], submitted: getSyncedQuestionStats(index).submitted };
+  return { counts: [], submitters: getSyncedQuestionStats(index).submitters, totalResponses: getSyncedQuestionStats(index).totalResponses };
 }
 function renderTalliesHtml(){
   const tallies = getSharedTallies();

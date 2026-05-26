@@ -825,7 +825,7 @@ function renderPresentationView(index = 0, showFinal = false){
           <div class="small" style="margin-bottom:4px"><strong>${nameVal}</strong> &nbsp;•&nbsp; ${modeText()}</div>
           <div class="qtext" style="font-weight:600;margin-top:6px">${question.text}</div>
           ${waitingText}
-          <div class="synced-score-callout" style="margin-top:8px">${syncedQuestionStatsLabel(safeIndex)}</div>
+          <div id="syncedQuestionStats" class="synced-score-callout" style="margin-top:8px">${syncedQuestionStatsLabel(safeIndex)}</div>
           <div class="wordcloud-wrap"><canvas id="wordCloudCanvas" width="500" height="300"></canvas></div>
           ${hostControls}
         </div>

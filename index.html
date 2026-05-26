@@ -1184,8 +1184,6 @@ function renderQuestion(i){
   screen.innerHTML = `
     <div>
       ${renderBanner(i)}
-      <div class="small" style="margin-bottom:6px"><strong>${nameVal}</strong></div>
-      <div class="small" style="margin-bottom:6px">${modeText()}</div>
       <div class="qtext">${q.text}</div>
       ${prevAnswersHtml}
       <p class="small" style="margin-top:8px;color:#6a1b9a;font-weight:600">You can respond as many times as you like — each response adds to the word cloud.</p>
@@ -1210,6 +1208,7 @@ function renderQuestion(i){
             <div id="syncedQuestionStats" class="synced-score-callout" style="display:${showSyncedStats?'block':'none'}">${syncedStatsText}</div>
             <p class="small" style="margin-top:8px">Offline mode: submit each answer, then use Next to continue.</p>`
       }
+      <div class="small" style="margin-top:14px;color:#999;font-size:.78rem;text-align:right"><strong>${nameVal}</strong> &nbsp;·&nbsp; ${modeText()}</div>
     </div>`;
   updateSyncedQuestionStatsUI();
   updateHeader();

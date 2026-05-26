@@ -153,6 +153,7 @@ let presentationHeartbeatTimer = null;
 let participantId = '';
 let participantFeedback = {};
 let qrCodeDataUrl = '';
+let qrCodeFileName = '';
 let lastRemoteCurrent = -1;
 let lastRemoteEnded = false;
 let lastRemotePhase = '';
@@ -702,6 +703,7 @@ async function resetPresentationRoomForNewSession(){
   answered = [];
   participantFeedback = {};
   qrCodeDataUrl = '';
+  qrCodeFileName = '';
   phase = PHASE_LOBBY;
   current = 0;
   await firebaseFns.remove(firebaseResultsRef).catch(e => console.error('Firebase reset error:', e));
@@ -716,7 +718,7 @@ function renderPresentationLobby(){
   setPresentationShell(true);
   phase = PHASE_LOBBY;
   const qrPreview = qrCodeDataUrl
-    ? `<div style="margin:10px 0"><img src="${qrCodeDataUrl}" alt="Session QR code" style="max-width:min(100%,320px);border-radius:10px;border:1px solid #eadfbf" /></div>`
+    ? `<div class="small" style="margin:10px 0;padding:8px 12px;background:#f0f0f0;border-radius:8px;border:1px solid #ddd">✓ QR code uploaded: <strong>${qrCodeFileName}</strong></div>`
     : '<p class="small" style="margin-top:8px">Upload the session QR code to begin.</p>';
   const startGameButton = qrCodeDataUrl
     ? '<button onclick="startHostQuestions()">Start Game</button>'
@@ -747,6 +749,7 @@ function renderPresentationLobby(){
 function onQrUploadChange(evt){
   const file = evt && evt.target && evt.target.files ? evt.target.files[0] : null;
   if(!file) return;
+  qrCodeFileName = file.name;
   const reader = new FileReader();
   reader.onload = async () => {
     qrCodeDataUrl = typeof reader.result === 'string' ? reader.result : '';
@@ -1060,6 +1063,7 @@ async function forceResetAll(){
   lastPresentationResultsCount = -1;
   lastPresentationQr = '';
   qrCodeDataUrl = '';
+  qrCodeFileName = '';
   try{
     if(await loadRealtimeLibs()){
       const sessionRef = firebaseFns.ref(firebaseDb, `sessions/${PUBLIC_ROOM_ID}`);
@@ -1334,6 +1338,7 @@ function retake(){
   lastPresentationResultsCount = -1;
   lastPresentationQr = '';
   qrCodeDataUrl = '';
+  qrCodeFileName = '';
   renderLanding();
   updateHeader();
 }
@@ -1363,6 +1368,7 @@ async function startQuiz(mode = 'participant'){
   if(sessionMode === 'presentation'){
     current = 0;
     qrCodeDataUrl = '';
+    qrCodeFileName = '';
     realtimeEnabled = await initRealtime();
     if(!realtimeEnabled){
       alert('Presentation View could not start because live sync is unavailable. Check internet or firewall access to Firebase, then try again.');

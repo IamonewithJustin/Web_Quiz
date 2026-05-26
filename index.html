@@ -242,7 +242,7 @@ function startLandingStatusWatch(){
   stopLandingStatusWatch();
   landingStatusKnown = false;
   refreshLandingAvailability();
-  landingStatusTimer = setInterval(()=>{ refreshLandingAvailability(); }, 4000);
+  landingStatusTimer = setInterval(()=>{ refreshLandingAvailability(); }, 2000);
 }
 function toggleAnonymousJoin(checked){
   anonymousJoin = !!checked;
@@ -1021,7 +1021,7 @@ async function initRealtime(){
       if(sharedState && sharedState.get('presentationToken') === presentationToken){
         sharedState.set('presentationHeartbeat', Date.now());
       }
-    }, 5000);
+    }, 2500);
     sharedStateObserverUnsub = sharedState.observe(()=>{
       if(sessionMode !== 'presentation') return;
       applyPresentationState();

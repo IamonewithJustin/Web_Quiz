@@ -122,8 +122,8 @@
 <script>
 /*** ====== SURVEY DATA ====== ***/
 const QUESTIONS = [
-  { text: "What behaviors or practices reduce trust in your team?", image: "assets/slide_images/q01.jpg" },
-  { text: "What behaviors or practices reduce resilience during change?", image: "assets/slide_images/q02.jpg" }
+  { text: "What behaviors or practices reduce trust in your team?", image: "assets/slide_images/q02.jpg" },
+  { text: "What behaviors or practices reduce resilience during change?", image: "assets/slide_images/q01.jpg" }
 ];
 const ROUND1_COUNT = QUESTIONS.length;
 const total = QUESTIONS.length;
@@ -799,7 +799,6 @@ function renderPresentationView(index = 0, showFinal = false){
   if(showFinal || phase === PHASE_FINAL){
     screen.innerHTML = `
       <div>
-        ${renderBanner(total-1)}
         <div class="small" style="margin-bottom:6px"><strong>${nameVal}</strong></div>
         <div class="small" style="margin-bottom:10px">${modeText()}</div>
         <h3 style="margin-top:0">Final Word Cloud Display</h3>
@@ -823,7 +822,6 @@ function renderPresentationView(index = 0, showFinal = false){
           <div id="tickerPanel">${renderResponseTickerHtml(safeIndex)}</div>
         </div>
         <div class="presentation-panel">
-          ${renderBanner(safeIndex)}
           <div class="small" style="margin-bottom:4px"><strong>${nameVal}</strong> &nbsp;•&nbsp; ${modeText()}</div>
           <div class="qtext" style="font-weight:600;margin-top:6px">${question.text}</div>
           ${waitingText}
@@ -1085,7 +1083,6 @@ function renderLanding(){
   anonymousJoin = false;
   screen.innerHTML = `
     <div>
-      ${renderBanner(0)}
       <p class="small">Hosts run Presentation View. Participants scan the QR code and join automatically once the host starts.</p>
       <p id="landingAvailNote" class="small" style="display:none"></p>
       <div class="controls" style="margin-top:14px">
@@ -1101,7 +1098,6 @@ function renderParticipantJoin(){
   stopLandingStatusWatch();
   screen.innerHTML = `
     <div>
-      ${renderBanner(0)}
       <div class="row">
         <div style="width:100%">
           <div id="nameHint" class="small" style="margin:0 0 6px 2px">Name or Alias</div>
@@ -1125,7 +1121,6 @@ function renderAbout(){
   stopLandingStatusWatch();
   screen.innerHTML = `
     <div>
-      ${renderBanner(1)}
       <ul class="small" style="margin-top:0">
         <li>2 open-ended questions about team behaviors and resilience.</li>
         <li>Participants type their responses; answers are collected anonymously.</li>
@@ -1271,7 +1266,6 @@ function renderEnd(){
   }
   screen.innerHTML = `
     <div class="center">
-      ${renderBanner(total-1)}
       ${sessionMode==='participant'
         ? `<h3>Thank you for your responses!</h3><p class="small">You responded to ${score} of ${total} question${total===1?'':'s'}. Your input will help build the word cloud.</p>`
         : `<h3>Survey Complete</h3><p class="small">Host display complete. Use Force Reset in Presentation View to begin a new run.</p>`}

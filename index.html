@@ -64,14 +64,14 @@
   .presentation-legend .item{display:flex;justify-content:space-between;align-items:center;font-size:.95rem}
   .presentation-legend .dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px}
   /* projector-safe viewport fit */
-  body.presentation-active{overflow:hidden}
+  body.presentation-active{overflow-y:auto}
   body.presentation-active .wrap{max-width:100%;padding:4px 10px 2px;display:flex;flex-direction:column;height:100vh;height:100dvh;box-sizing:border-box}
   body.presentation-active header{flex-shrink:0;margin-bottom:2px}
-  body.presentation-active .card{flex:1;overflow:hidden;min-height:0;border-radius:8px;display:flex;flex-direction:column}
+  body.presentation-active .card{flex:1;overflow-y:auto;min-height:0;border-radius:8px;display:flex;flex-direction:column}
   body.presentation-active .hero{flex-shrink:0;padding:8px 12px}
-  body.presentation-active .body{flex:1;overflow:hidden;min-height:0;padding:8px 10px}
-  body.presentation-active .presentation-grid{height:100%;align-items:stretch}
-  body.presentation-active .presentation-panel{height:100%;box-sizing:border-box;overflow-y:auto}
+  body.presentation-active .body{flex:1;overflow-y:auto;min-height:0;padding:8px 10px}
+  body.presentation-active .presentation-grid{align-items:start}
+  body.presentation-active .presentation-panel{box-sizing:border-box;overflow-y:visible}
   body.presentation-active .slide-banner{height:clamp(120px,22vh,170px);width:100%;aspect-ratio:unset}
   body.presentation-active .wrap > p.small{display:none}
   @media (max-width:760px){.presentation-grid{grid-template-columns:1fr}}
@@ -107,6 +107,12 @@
   .rxn-btn:active{transform:scale(.82);background:var(--muted)}
   @keyframes rxn-float{0%{opacity:0;transform:translateY(0) scale(.4)}18%{opacity:1;transform:translateY(-40px) scale(1.5)}80%{opacity:.85;transform:translateY(-170px) scale(1.15)}100%{opacity:0;transform:translateY(-230px) scale(.9)}}
   .rxn-float{position:fixed;pointer-events:none;font-size:4.5rem;animation:rxn-float 2.8s ease-out forwards;z-index:9999;user-select:none;filter:drop-shadow(0 4px 12px rgba(0,0,0,.35))}
+  .top-word{font-weight:900;border-radius:3px;padding:0 2px}
+  .top-word.rank-1{color:#6b21a8;font-size:1.06em;background:rgba(106,27,154,.12)}
+  .top-word.rank-2{color:#15803d;font-size:1.03em;background:rgba(21,128,61,.09)}
+  .top-word.rank-3{color:#b45309;background:rgba(180,83,9,.08)}
+  @keyframes milestone-pop{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}75%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(.92) translateY(-20px)}}
+  .milestone-banner{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10000;background:linear-gradient(135deg,#6b21a8,#9c27b0);color:#fff;font-size:2.8rem;font-weight:900;padding:22px 52px;border-radius:20px;text-align:center;pointer-events:none;animation:milestone-pop 3.4s ease-out forwards;box-shadow:0 12px 40px rgba(106,27,154,.55);white-space:nowrap}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/wordcloud@1.2.2/src/wordcloud2.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -165,6 +171,7 @@ let prevWordKeys = new Set();
 let lastReactionKeys = new Set();
 let presentationStartTime = 0;
 let reactionCooldown = false;
+let milestoneShown = new Set();
 let lastRemoteCurrent = -1;
 let lastRemoteEnded = false;
 let lastRemotePhase = '';
@@ -576,6 +583,35 @@ function renderTalliesHtml(){
       ${tallies.map(t => `<li><strong>${t.name}</strong> — ${t.rightOverall}/${t.totalOverall} responded</li>`).join('')}
     </ol>`;
 }
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function highlightTopWords(text, topWords){
+  let result = escapeHtml(text);
+  topWords.forEach((word, rank) => {
+    const safe = word.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    result = result.replace(new RegExp(`\\b${safe}\\b`,'gi'), m => `<mark class="top-word rank-${rank+1}">${m}</mark>`);
+  });
+  return result;
+}
+function getTotalResponseCount(){
+  let n = 0;
+  for(let i = 0; i < ROUND1_COUNT; i++) n += getSyncedQuestionStats(i).totalResponses;
+  return n;
+}
+function showMilestoneBanner(count){
+  const ex = document.getElementById('milestoneBanner');
+  if(ex) ex.remove();
+  const el = document.createElement('div');
+  el.id = 'milestoneBanner';
+  el.className = 'milestone-banner';
+  el.textContent = `🎉 ${count} responses!`;
+  document.body.appendChild(el);
+  setTimeout(()=>{ if(el.parentNode) el.parentNode.removeChild(el); }, 3500);
+}
+function checkMilestones(){
+  if(sessionMode !== 'presentation') return;
+  const n = getTotalResponseCount();
+  [10,25,50].forEach(m => { if(n >= m && !milestoneShown.has(m)){ milestoneShown.add(m); showMilestoneBanner(m); } });
+}
 function getQuestionResponses(qIndex){
   const results = getSharedResults();
   const responses = [];
@@ -592,13 +628,14 @@ function getQuestionResponses(qIndex){
 function renderResponseTickerHtml(qIndex){
   const responses = getQuestionResponses(qIndex);
   if(!responses.length) return '<p class="small">No responses yet — waiting for participants…</p>';
+  const topWords = buildWordFrequency(qIndex).slice(0, 3).map(([w]) => w);
   return responses.map(r => {
     const chars = r.name.length + r.text.length + 2;
     const dur = Math.max(8, chars * 0.07).toFixed(1);
     return `<div class="ticker-row">
-      <span class="ticker-name">${r.name}:</span>
+      <span class="ticker-name">${escapeHtml(r.name)}:</span>
       <div class="ticker-track">
-        <span class="ticker-text" style="animation-duration:${dur}s">${r.text}</span>
+        <span class="ticker-text" style="animation-duration:${dur}s">${highlightTopWords(r.text, topWords)}</span>
       </div>
     </div>`;
   }).join('');
@@ -990,6 +1027,7 @@ function applyPresentationState(){
   const tickerPanel = document.getElementById('tickerPanel');
   if(tickerPanel) tickerPanel.innerHTML = renderResponseTickerHtml(current);
   updateSyncedQuestionStatsUI();
+  checkMilestones();
   renderWordCloud(current);
 }
 function hasActivePresentation(){
@@ -1227,6 +1265,7 @@ async function startHostQuestions(){
     alert('Upload a QR code before starting the game.');
     return;
   }
+  milestoneShown = new Set();
   phase = PHASE_ROUND1;
   current = 0;
   await firebaseFns.remove(firebaseResultsRef).catch(e => console.error('Firebase reset error:', e));

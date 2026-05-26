@@ -52,6 +52,7 @@
   .synced-value-incorrect{color:#ff7d7d;font-weight:900;font-size:1.08rem}
   .presentation-grid{display:grid;grid-template-columns:minmax(220px,1fr) minmax(0,2.2fr);gap:10px;align-items:start}
   .presentation-panel{background:#fff;border:1px solid #eadfbf;border-radius:12px;padding:14px}
+  .qtext{font-size:1.3rem;font-weight:800;line-height:1.4;color:var(--purple);border-left:4px solid var(--purple);padding:10px 14px;background:rgba(106,27,154,.06);border-radius:0 12px 12px 0;margin:10px 0}
   .presentation-panel .qtext{font-size:1.35rem;line-height:1.35}
   .presentation-panel .small{font-size:1rem}
   .presentation-panel ol.small li{font-size:1.03rem;line-height:1.45;margin-bottom:4px}
@@ -1185,7 +1186,7 @@ function renderQuestion(i){
       ${renderBanner(i)}
       <div class="small" style="margin-bottom:6px"><strong>${nameVal}</strong></div>
       <div class="small" style="margin-bottom:6px">${modeText()}</div>
-      <div class="qtext" style="font-weight:600">${q.text}</div>
+      <div class="qtext">${q.text}</div>
       ${prevAnswersHtml}
       <p class="small" style="margin-top:8px;color:#6a1b9a;font-weight:600">You can respond as many times as you like — each response adds to the word cloud.</p>
       <textarea id="responseIn" placeholder="Type a response and hit Submit…" rows="3" style="width:100%;padding:12px;border-radius:12px;border:1px solid #ddd;font-size:1rem;resize:vertical;margin-top:6px;box-sizing:border-box" ${waitingForHost?'disabled':''}></textarea>

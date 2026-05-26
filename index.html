@@ -53,7 +53,7 @@
   .presentation-grid{display:grid;grid-template-columns:minmax(220px,1fr) minmax(0,2.2fr);gap:10px;align-items:start}
   .presentation-panel{background:#fff;border:1px solid #eadfbf;border-radius:12px;padding:14px}
   .qtext{font-size:1.5rem;font-weight:900;line-height:1.35;color:#5a0f7a;border-left:6px solid var(--purple);padding:16px 18px;background:linear-gradient(135deg,rgba(106,27,154,.08),rgba(106,27,154,.12));border-radius:0 14px 14px 0;margin:16px 0 14px;box-shadow:0 3px 10px rgba(106,27,154,.15)}
-  .presentation-panel .qtext{font-size:1.35rem;line-height:1.35}
+  .presentation-panel .qtext{font-size:2.2rem;line-height:1.25}
   .presentation-panel .small{font-size:1rem}
   .presentation-panel ol.small li{font-size:1.03rem;line-height:1.45;margin-bottom:4px}
   .presentation-pie{width:160px;height:160px;border-radius:50%;border:1px solid #eadfbf;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.05rem;color:#222;flex-shrink:0}
@@ -76,7 +76,7 @@
   body.presentation-active .wrap > p.small{display:none}
   @media (max-width:760px){.presentation-grid{grid-template-columns:1fr}}
   @media (max-height:760px){
-    body.presentation-active .presentation-panel .qtext{font-size:1.15rem}
+    body.presentation-active .presentation-panel .qtext{font-size:1.7rem}
     body.presentation-active .presentation-panel .small{font-size:.92rem}
     body.presentation-active .presentation-panel ol.small li{font-size:.94rem;line-height:1.35}
     body.presentation-active .presentation-pie{width:140px;height:140px;font-size:.95rem}
@@ -825,9 +825,9 @@ function renderPresentationView(index = 0, showFinal = false){
           <div class="small" style="margin-bottom:4px"><strong>${nameVal}</strong> &nbsp;•&nbsp; ${modeText()}</div>
           <div class="qtext" style="font-weight:600;margin-top:6px">${question.text}</div>
           ${waitingText}
-          <div id="syncedQuestionStats" class="synced-score-callout" style="margin-top:8px">${syncedQuestionStatsLabel(safeIndex)}</div>
           <div class="wordcloud-wrap"><canvas id="wordCloudCanvas" width="500" height="300"></canvas></div>
           ${hostControls}
+          <div id="syncedQuestionStats" class="synced-score-callout" style="margin-top:8px;text-align:right">${syncedQuestionStatsLabel(safeIndex)}</div>
         </div>
       </div>
     </div>`;
@@ -920,6 +920,7 @@ function applyPresentationState(){
   qrCodeDataUrl = lastPresentationQr;
   const tickerPanel = document.getElementById('tickerPanel');
   if(tickerPanel) tickerPanel.innerHTML = renderResponseTickerHtml(current);
+  updateSyncedQuestionStatsUI();
   renderWordCloud(current);
 }
 function hasActivePresentation(){

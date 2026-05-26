@@ -1002,6 +1002,11 @@ async function initRealtime(){
       destroyRealtime();
       return false;
     }
+    // Sync token into local state immediately so hasActivePresentation() returns true
+    sharedState.set('presentationToken', presentationToken);
+    // Reset room for new session now that we hold the token
+    await firebaseFns.remove(firebaseResultsRef).catch(e => console.error('Firebase reset error:', e));
+    sharedState.replaceResults({});
     sharedState.set('presentationName', nameVal);
     sharedState.set('presentationHeartbeat', Date.now());
     sharedState.set('phase', PHASE_LOBBY);
@@ -1358,20 +1363,6 @@ async function startQuiz(mode = 'participant'){
   if(sessionMode === 'presentation'){
     current = 0;
     qrCodeDataUrl = '';
-    // Pre-reset Firebase to LOBBY before initRealtime so no participant ever
-    // reads stale PHASE_ROUND1 from a previous session.
-    if(await loadRealtimeLibs()){
-      try{
-        const _sRef = firebaseFns.ref(firebaseDb, `sessions/${PUBLIC_ROOM_ID}`);
-        await Promise.all([
-          firebaseFns.update(firebaseFns.child(_sRef, 'state'), {
-            phase: PHASE_LOBBY, ended: false, current: 0, qrCodeDataUrl: null,
-            presentationToken: null, presentationHeartbeat: 0
-          }),
-          firebaseFns.remove(firebaseFns.child(_sRef, 'results'))
-        ]);
-      }catch(e){ console.error('Pre-start reset failed:', e); }
-    }
     realtimeEnabled = await initRealtime();
     if(!realtimeEnabled){
       alert('Presentation View could not start because live sync is unavailable. Check internet or firewall access to Firebase, then try again.');

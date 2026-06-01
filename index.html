@@ -1357,6 +1357,7 @@ function next(){
   phase = PHASE_FINAL;
   renderPresentationView(current, true);
   pushHostState(true);
+  setTimeout(()=>{ exportAllWordCloudsPdf(); }, 800);
 }
 function prev(){
   if(sessionMode === 'participant') return;

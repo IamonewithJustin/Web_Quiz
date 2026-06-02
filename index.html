@@ -994,16 +994,13 @@ function renderPresentationView(index = 0, showFinal = false){
       <div>
         <div class="small" style="margin-bottom:6px"><strong>${nameVal}</strong></div>
         <div class="small" style="margin-bottom:10px">${modeText()}</div>
-        <h3 style="margin-top:0">Final Word Cloud Display</h3>
-        ${waitingText}
-        <div class="presentation-panel" style="margin-top:12px">
-          <div class="small" style="font-weight:700">Participant Responses</div>
-          ${renderTalliesHtml()}
-        </div>
+        <h3 style="margin-top:0">Final Word Clouds</h3>
+        <div class="all-clouds-grid">${renderAllWordCloudsMarkup('finalCloudCanvas-', false)}</div>
         ${hostControls}
       </div>`;
     updateHeader();
     saveSessionState();
+    paintAllWordCloudCanvases('finalCloudCanvas-');
     return;
   }
 

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Trust and Resilience Wordcloud</title>
 <style>
-  :root{--purple:#6a1b9a;--green:#2e7d32;--gold:#c0a000;--ink:#1b1b1b;--bg:#fffdf7;--muted:#f3efe2}
+  :root{--purple:#10384F;--green:#00A854;--gold:#009CDE;--ink:#1b1b1b;--bg:#ffffff;--muted:#f0f4f7}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;overscroll-behavior-y:contain}
   .wrap{max-width:760px;margin:0 auto;padding:20px 16px 56px}
   header{display:flex;align-items:center;gap:12px;margin-bottom:8px}
@@ -14,10 +14,10 @@
     linear-gradient(135deg,var(--purple),var(--green),var(--gold));
     box-shadow:0 2px 8px rgba(0,0,0,.15)}
   h1{font-size:1.25rem;margin:0}
-  .card{background:#fff;border:1px solid #eadfbf;border-radius:16px;box-shadow:0 6px 16px rgba(0,0,0,.06);overflow:hidden}
+  .card{background:#fff;border:1px solid #d0e5f0;border-radius:16px;box-shadow:0 6px 16px rgba(0,0,0,.06);overflow:hidden}
   .hero{padding:18px;background:
-    repeating-linear-gradient(135deg,rgba(106,27,154,.10),rgba(106,27,154,.10) 8px,transparent 8px,transparent 16px),
-    linear-gradient(135deg,rgba(46,125,50,.08),rgba(192,160,0,.08));border-bottom:1px solid #eadfbf}
+    repeating-linear-gradient(135deg,rgba(16,56,79,.10),rgba(16,56,79,.10) 8px,transparent 8px,transparent 16px),
+    linear-gradient(135deg,rgba(0,168,84,.08),rgba(0,156,222,.08));border-bottom:1px solid #d0e5f0}
   .hero h2{margin:.1rem 0 .35rem 0;font-size:1.1rem}
   .small{font-size:.92rem;color:#333}
   .body{padding:18px}
@@ -27,36 +27,36 @@
   input[type="text"],input[type="number"]{width:100%;padding:12px;border-radius:12px;border:1px solid #ddd}
   .choices{display:grid;gap:10px;margin-top:8px}
   .choice{border:1px solid #ddd;background:#fff;border-radius:12px;padding:12px 14px;display:flex;gap:10px;cursor:pointer}
-  .choice:hover{border-color:#c9b98a;background:#fffdf2}
+  .choice:hover{border-color:#009CDE;background:#f0f8ff}
   .choice-media{align-items:center}
-  .choice-thumb{width:88px;height:88px;object-fit:cover;border-radius:10px;border:1px solid #eadfbf;flex:0 0 auto}
+  .choice-thumb{width:88px;height:88px;object-fit:cover;border-radius:10px;border:1px solid #d0e5f0;flex:0 0 auto}
   .controls{display:flex;justify-content:space-between;gap:10px;margin-top:14px;flex-wrap:wrap}
   button{border:none;border-radius:12px;padding:12px 16px;font-weight:600;cursor:pointer;background:var(--purple);color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.15)}
   button.secondary{background:#eee;color:#222}
-  button.outline{background:#fff;border:1px solid #c9b98a;color:#222}
+  button.outline{background:#fff;border:1px solid #009CDE;color:#10384F}
   button:disabled{opacity:.55;cursor:not-allowed}
-  .tag{padding:6px 10px;border-radius:999px;font-size:.9rem;border:1px solid #eadfbf;background:#fff;display:inline-block;margin-right:8px}
+  .tag{padding:6px 10px;border-radius:999px;font-size:.9rem;border:1px solid #d0e5f0;background:#fff;display:inline-block;margin-right:8px}
   .center{text-align:center}
   details summary{cursor:pointer}
-  .slide-banner{width:min(100%,540px);aspect-ratio:32/27;margin:0 auto 10px;border-radius:12px;background-color:#000;background-size:contain;background-repeat:no-repeat;background-position:center center;border:1px solid #eadfbf}
+  .slide-banner{width:min(100%,540px);aspect-ratio:32/27;margin:0 auto 10px;border-radius:12px;background-color:#000;background-size:contain;background-repeat:no-repeat;background-position:center center;border:1px solid #d0e5f0}
   .feedback-banner{margin-top:10px;padding:14px 16px;border-radius:14px;border:2px solid;font-size:1.05rem;font-weight:800;line-height:1.35;letter-spacing:.2px;box-shadow:0 6px 14px rgba(0,0,0,.12)}
   .feedback-banner .label{display:block;font-size:.82rem;font-weight:900;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
   .feedback-correct{color:#fff;background:linear-gradient(135deg,var(--green),var(--purple));border-color:var(--green)}
   .feedback-wrong{color:#fff;background:linear-gradient(135deg,var(--purple),var(--gold));border-color:var(--gold)}
-  .answer-fact-card{margin-top:10px;padding:12px 14px;border-radius:12px;border:1px solid #eadfbf;background:#fff;color:#111;font-weight:400}
-  .synced-score-callout{width:100%;box-sizing:border-box;margin-top:8px;padding:8px 14px;border-radius:10px;border:1px solid rgba(106,27,154,.25);background:rgba(106,27,154,.06);color:#3d0a5a;font-size:.92rem;font-weight:500;letter-spacing:.1px}
-  .synced-score-label{font-weight:600;font-size:.82rem;letter-spacing:.3px;margin-right:12px;color:#5a0f7a}
-  .synced-correct{color:#58d68d}
+  .answer-fact-card{margin-top:10px;padding:12px 14px;border-radius:12px;border:1px solid #d0e5f0;background:#fff;color:#111;font-weight:400}
+  .synced-score-callout{width:100%;box-sizing:border-box;margin-top:8px;padding:8px 14px;border-radius:10px;border:1px solid rgba(16,56,79,.25);background:rgba(16,56,79,.06);color:#10384F;font-size:.92rem;font-weight:500;letter-spacing:.1px}
+  .synced-score-label{font-weight:600;font-size:.82rem;letter-spacing:.3px;margin-right:12px;color:#10384F}
+  .synced-correct{color:#00A854}
   .synced-incorrect{color:#ff6b6b}
-  .synced-value-correct{color:#7dff9f;font-weight:900;font-size:1.08rem}
+  .synced-value-correct{color:#00A854;font-weight:900;font-size:1.08rem}
   .synced-value-incorrect{color:#ff7d7d;font-weight:900;font-size:1.08rem}
   .presentation-grid{display:grid;grid-template-columns:minmax(220px,1fr) minmax(0,2.2fr);gap:10px;align-items:start}
-  .presentation-panel{background:#fff;border:1px solid #eadfbf;border-radius:12px;padding:14px}
-  .qtext{font-size:1.5rem;font-weight:900;line-height:1.35;color:#5a0f7a;border-left:6px solid var(--purple);padding:16px 18px;background:linear-gradient(135deg,rgba(106,27,154,.08),rgba(106,27,154,.12));border-radius:0 14px 14px 0;margin:16px 0 14px;box-shadow:0 3px 10px rgba(106,27,154,.15)}
+  .presentation-panel{background:#fff;border:1px solid #d0e5f0;border-radius:12px;padding:14px}
+  .qtext{font-size:1.5rem;font-weight:900;line-height:1.35;color:#10384F;border-left:6px solid var(--purple);padding:16px 18px;background:linear-gradient(135deg,rgba(16,56,79,.08),rgba(16,56,79,.12));border-radius:0 14px 14px 0;margin:16px 0 14px;box-shadow:0 3px 10px rgba(16,56,79,.15)}
   .presentation-panel .qtext{font-size:2.2rem;line-height:1.25}
   .presentation-panel .small{font-size:1rem}
   .presentation-panel ol.small li{font-size:1.03rem;line-height:1.45;margin-bottom:4px}
-  .presentation-pie{width:160px;height:160px;border-radius:50%;border:1px solid #eadfbf;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.05rem;color:#222;flex-shrink:0}
+  .presentation-pie{width:160px;height:160px;border-radius:50%;border:1px solid #d0e5f0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.05rem;color:#222;flex-shrink:0}
   .presentation-bottom-row{display:flex;gap:12px;align-items:center;margin-top:10px}
   .presentation-bottom-row .synced-score-callout{flex:1;margin:0}
   .presentation-pie-wrap{display:flex;flex-direction:column;align-items:center;flex-shrink:0;transform:translateY(-40%)}
@@ -92,30 +92,30 @@
   @keyframes wc-word-arrive { 0%{opacity:0;transform:translate(-50%,-50%) scale(0.3)} 35%{opacity:1;transform:translate(-50%,-50%) scale(1.25)} 65%{opacity:1;transform:translate(-50%,-50%) scale(1)} 100%{opacity:0;transform:translate(-50%,-50%) scale(0.75) translateY(-28px)} }
   .wc-fly-word{position:absolute;pointer-events:none;font-weight:900;white-space:nowrap;text-shadow:0 2px 8px rgba(0,0,0,.22);animation:wc-word-arrive 1.6s ease-out forwards;z-index:10}
   .wordcloud-wrap canvas { max-width:100%; border-radius:12px; background:#fafafa }
-  .anonymous-toggle{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #eadfbf;border-radius:12px;background:#fff}
+  .anonymous-toggle{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #d0e5f0;border-radius:12px;background:#fff}
   .anonymous-toggle input{width:auto;margin:0}
   .all-clouds-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:14px}
-  .all-cloud-card{background:#fff;border:1px solid #eadfbf;border-radius:12px;padding:14px}
+  .all-cloud-card{background:#fff;border:1px solid #d0e5f0;border-radius:12px;padding:14px}
   .all-cloud-card h4{margin:0 0 8px;font-size:1rem}
   .all-cloud-card canvas{width:100%;max-width:100%;border-radius:12px;background:#fafafa}
   .response-list{margin:10px 0 0;padding-left:18px;text-align:left}
   .response-list li{margin-bottom:6px;line-height:1.4}
   .pdf-export-root{position:fixed;left:-10000px;top:0;width:760px;background:#fff;color:#111;padding:0;z-index:-1}
   .pdf-export-page{width:760px;box-sizing:border-box;padding:24px;border-bottom:1px solid #ddd;background:#fff}
-  .reaction-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:12px;padding:8px 12px;background:rgba(106,27,154,.04);border-radius:10px;border:1px solid rgba(106,27,154,.12)}
-  .rxn-btn{background:#fff;border:1px solid #eadfbf;border-radius:999px;padding:5px 11px;font-size:1.4rem;cursor:pointer;box-shadow:none;line-height:1;color:inherit;min-width:0;transition:transform .12s,background .12s;width:auto}
+  .reaction-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:12px;padding:8px 12px;background:rgba(16,56,79,.04);border-radius:10px;border:1px solid rgba(16,56,79,.12)}
+  .rxn-btn{background:#fff;border:1px solid #d0e5f0;border-radius:999px;padding:5px 11px;font-size:1.4rem;cursor:pointer;box-shadow:none;line-height:1;color:inherit;min-width:0;transition:transform .12s,background .12s;width:auto}
   .rxn-btn:active{transform:scale(.82);background:var(--muted)}
   @keyframes rxn-float{0%{opacity:0;transform:translateY(0) scale(.4)}18%{opacity:1;transform:translateY(-40px) scale(1.5)}80%{opacity:.85;transform:translateY(-170px) scale(1.15)}100%{opacity:0;transform:translateY(-230px) scale(.9)}}
   .rxn-float{position:fixed;pointer-events:none;font-size:4.5rem;animation:rxn-float 2.8s ease-out forwards;z-index:9999;user-select:none;filter:drop-shadow(0 4px 12px rgba(0,0,0,.35))}
   .top-word{font-weight:900;border-radius:3px;padding:0 2px}
-  .top-word.rank-1{color:#6b21a8;font-size:1.06em;background:rgba(106,27,154,.12)}
-  .top-word.rank-2{color:#15803d;font-size:1.03em;background:rgba(21,128,61,.09)}
-  .top-word.rank-3{color:#b45309;background:rgba(180,83,9,.08)}
+  .top-word.rank-1{color:#10384F;font-size:1.06em;background:rgba(16,56,79,.12)}
+  .top-word.rank-2{color:#00A854;font-size:1.03em;background:rgba(0,168,84,.09)}
+  .top-word.rank-3{color:#009CDE;background:rgba(0,156,222,.08)}
   @keyframes milestone-pop{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}75%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(.92) translateY(-20px)}}
-  .milestone-banner{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10000;background:linear-gradient(135deg,#6b21a8,#9c27b0);color:#fff;font-size:2.8rem;font-weight:900;padding:22px 52px;border-radius:20px;text-align:center;pointer-events:none;animation:milestone-pop 3.4s ease-out forwards;box-shadow:0 12px 40px rgba(106,27,154,.55);white-space:nowrap}
+  .milestone-banner{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10000;background:linear-gradient(135deg,#10384F,#009CDE);color:#fff;font-size:2.8rem;font-weight:900;padding:22px 52px;border-radius:20px;text-align:center;pointer-events:none;animation:milestone-pop 3.4s ease-out forwards;box-shadow:0 12px 40px rgba(16,56,79,.55);white-space:nowrap}
   .pin-modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px}
-  .pin-modal{background:#fff;border-radius:16px;padding:24px;max-width:380px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.35);border:1px solid #eadfbf}
-  .pin-modal h3{margin:0 0 16px;font-size:1.2rem;color:#5a0f7a}
+  .pin-modal{background:#fff;border-radius:16px;padding:24px;max-width:380px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.35);border:1px solid #d0e5f0}
+  .pin-modal h3{margin:0 0 16px;font-size:1.2rem;color:#10384F}
   .pin-modal input[type="password"]{width:100%;padding:14px;border-radius:12px;border:1px solid #ddd;font-size:1.1rem;letter-spacing:4px;text-align:center;box-sizing:border-box}
   .pin-modal-buttons{display:flex;gap:10px;margin-top:16px}
   .pin-modal-buttons button{flex:1}
@@ -691,7 +691,7 @@ function renderWordCloudToCanvas(canvas, qIndex){
   WordCloud(canvas, {
     list,
     weightFactor: w => Math.max(14, Math.min(60, (w / maxFreq) * 60)),
-    color: () => ['#6b21a8','#15803d','#b45309'][Math.floor(Math.random()*3)],
+    color: () => ['#10384F','#00A854','#009CDE'][Math.floor(Math.random()*3)],
     rotateRatio: 0,
     backgroundColor: '#fafafa',
     gridSize: 8,
@@ -699,7 +699,7 @@ function renderWordCloudToCanvas(canvas, qIndex){
   });
 }
 function spawnWordOverlays(newWords, container){
-  const colors = ['#6b21a8','#15803d','#b45309','#1565c0','#ad1457'];
+  const colors = ['#10384F','#00A854','#009CDE','#0078A0','#10384F'];
   newWords.slice(0, 5).forEach((word, i) => {
     const el = document.createElement('div');
     el.className = 'wc-fly-word';
@@ -1392,7 +1392,7 @@ function renderQuestion(i){
     <div>
       <div class="qtext">${q.text}</div>
       ${prevAnswersHtml}
-      <p class="small" style="margin-top:8px;color:#6a1b9a;font-weight:600">You can respond as many times as you like — each response adds to the word cloud.</p>
+      <p class="small" style="margin-top:8px;color:#10384F;font-weight:600">You can respond as many times as you like — each response adds to the word cloud.</p>
       <textarea id="responseIn" placeholder="Type a response and hit Submit…" rows="3" style="width:100%;padding:12px;border-radius:12px;border:1px solid #ddd;font-size:1rem;resize:vertical;margin-top:6px;box-sizing:border-box" ${waitingForHost?'disabled':''}></textarea>
       ${waitingForHost
           ? `<div class="controls">

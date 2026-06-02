@@ -64,9 +64,13 @@
   .presentation-legend .item{display:flex;justify-content:space-between;align-items:center;font-size:.95rem}
   .presentation-legend .dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px}
   /* projector-safe viewport fit */
-  body.presentation-active{overflow-y:auto}
-  body.presentation-active .wrap{max-width:100%;padding:4px 10px 2px;display:flex;flex-direction:column;height:100vh;height:100dvh;box-sizing:border-box}
-  body.presentation-active header{flex-shrink:0;margin-bottom:2px}
+  body.presentation-active{overflow:hidden}
+  body.presentation-active .wrap{max-width:100%;padding:4px 10px 2px;box-sizing:border-box;
+    display:flex;flex-direction:column;
+    transform:scale(0.75);transform-origin:top left;
+    width:133.333%;height:133.333vh;height:133.333dvh;
+    overflow:hidden}
+  body.presentation-active header{flex-shrink:0;margin-bottom:2px;display:flex}
   body.presentation-active .card{flex:1;overflow-y:auto;min-height:0;border-radius:8px;display:flex;flex-direction:column}
   body.presentation-active .hero{flex-shrink:0;padding:8px 12px}
   body.presentation-active .body{flex:1;overflow-y:auto;min-height:0;padding:8px 10px}

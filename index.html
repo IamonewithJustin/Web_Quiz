@@ -697,14 +697,16 @@ function renderWordCloudToCanvas(canvas, qIndex){
     else if(i < 20) wcColorMap[item[0]] = '#3d3050';
     else wcColorMap[item[0]] = '#666677';
   });
+  const scale = canvas.width / 500;
   WordCloud(canvas, {
     list,
-    weightFactor: w => Math.max(14, Math.min(60, (w / maxFreq) * 60)),
+    weightFactor: w => Math.max(18 * scale, Math.min(160 * scale, (w / maxFreq) * 140 * scale)),
     color: word => wcColorMap[word] || '#555566',
     rotateRatio: 0,
     backgroundColor: '#fafafa',
-    gridSize: 8,
-    minSize: 10
+    gridSize: Math.round(4 * scale),
+    minSize: 10,
+    shrinkToFit: true
   });
 }
 function spawnWordOverlays(newWords, container){

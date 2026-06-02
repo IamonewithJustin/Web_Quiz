@@ -426,7 +426,8 @@ function shouldShowSyncedQuestionStats(){
 }
 function syncedQuestionStatsLabel(index){
   const stats = getSyncedQuestionStats(index);
-  return `<span class="synced-score-label">Responses: <strong>${stats.totalResponses}</strong></span><span class="synced-score-label">Submitters: <strong>${stats.submitters}</strong></span>`;
+  const totalParticipants = getTotalParticipantCount();
+  return `<span style="font-size:.88rem;color:#555"><strong>Responses:</strong> ${stats.totalResponses} &nbsp;•&nbsp; <strong>Participants:</strong> ${totalParticipants}</span>`;
 }
 function updateSyncedQuestionStatsUI(){
   const el = document.getElementById('syncedQuestionStats');
@@ -583,6 +584,14 @@ function getSyncedQuestionStats(index){
     if(count > 0){ submitters++; totalResponses += count; }
   });
   return { submitters, totalResponses };
+}
+function getTotalParticipantCount(){
+  if(!sharedState) return 0;
+  let count = 0;
+  sharedState.forEach((value, key) => {
+    if(typeof key === 'string' && key.startsWith('result:')) count++;
+  });
+  return count;
 }
 function getSyncedOptionDistribution(index){
   // Kept as stub for compatibility — word cloud replaces pie chart
@@ -898,10 +907,33 @@ function showQrOnly(){
     <div class="center">
       <h3 style="margin-top:0">Scan to Join</h3>
       <img src="${qrCodeDataUrl}" alt="Session QR code" style="max-width:min(100%,520px);border-radius:10px;border:1px solid #eadfbf" />
+      <div style="margin-top:12px">
+        <label style="cursor:pointer;display:inline-block">
+          <span style="padding:6px 14px;border:1px solid #aaa;border-radius:6px;font-size:0.85rem;background:#f7f7f7">Replace QR Code</span>
+          <input id="qrReplaceIn" type="file" accept="image/*" style="display:none" />
+        </label>
+      </div>
       <div class="controls" style="justify-content:center;margin-top:12px">
         <button onclick="renderPresentationView(current, phase === PHASE_FINAL)">Back to Presentation</button>
       </div>
     </div>`;
+  const upload = document.getElementById('qrReplaceIn');
+  if(upload){
+    upload.addEventListener('change', (evt) => {
+      const file = evt && evt.target && evt.target.files ? evt.target.files[0] : null;
+      if(!file) return;
+      qrCodeFileName = file.name;
+      const reader = new FileReader();
+      reader.onload = async () => {
+        qrCodeDataUrl = typeof reader.result === 'string' ? reader.result : '';
+        if(sharedState && sessionMode === 'presentation'){
+          sharedState.set('qrCodeDataUrl', qrCodeDataUrl);
+        }
+        showQrOnly();
+      };
+      reader.readAsDataURL(file);
+    });
+  }
 }
 function renderPresentationView(index = 0, showFinal = false){
   stopLandingStatusWatch();
@@ -1329,10 +1361,6 @@ function renderParticipantLobby(){
 }
 async function startHostQuestions(){
   if(sessionMode !== 'presentation' || !sharedState) return;
-  if(!qrCodeDataUrl){
-    alert('Upload a QR code before starting the game.');
-    return;
-  }
   milestoneShown = new Set();
   phase = PHASE_ROUND1;
   current = 0;
@@ -1541,8 +1569,6 @@ async function startQuiz(mode = 'participant'){
 
   if(sessionMode === 'presentation'){
     current = 0;
-    qrCodeDataUrl = '';
-    qrCodeFileName = '';
     realtimeEnabled = await initRealtime();
     if(!realtimeEnabled){
       alert('Presentation View could not start because live sync is unavailable. Check internet or firewall access to Firebase, then try again.');
@@ -1550,7 +1576,11 @@ async function startQuiz(mode = 'participant'){
       renderLanding();
       return;
     }
-    renderPresentationLobby();
+    if(!qrCodeDataUrl){
+      const defaultUrl = await loadDefaultQr();
+      if(defaultUrl){ qrCodeDataUrl = defaultUrl; qrCodeFileName = 'default'; }
+    }
+    await startHostQuestions();
     return;
   }
 

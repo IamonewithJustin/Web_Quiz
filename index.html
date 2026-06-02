@@ -1398,9 +1398,12 @@ async function startHostQuestions(){
   milestoneShown = new Set();
   phase = PHASE_ROUND1;
   current = 0;
+  lastPresentationPhase = PHASE_ROUND1;
+  lastPresentationCurrent = 0;
   await firebaseFns.remove(firebaseResultsRef).catch(e => console.error('Firebase reset error:', e));
   sharedState.replaceResults({});
   sharedState.set('qrCodeDataUrl', qrCodeDataUrl);
+  sharedState.set('phase', PHASE_ROUND1);
   pushHostState(false);
   renderPresentationView(current);
 }

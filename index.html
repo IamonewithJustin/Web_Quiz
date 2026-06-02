@@ -64,6 +64,7 @@
   .presentation-legend .item{display:flex;justify-content:space-between;align-items:center;font-size:.95rem}
   .presentation-legend .dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px}
   /* projector-safe viewport fit */
+  html:has(body.presentation-active){ font-size: 133.333% }
   body.presentation-active{overflow:hidden}
   body.presentation-active .wrap{max-width:100%;padding:4px 10px 2px;box-sizing:border-box;
     display:flex;flex-direction:column;

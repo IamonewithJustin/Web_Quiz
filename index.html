@@ -186,6 +186,7 @@ let landingStatusKnown = false;
 let landingStatusTimer = null;
 const SESSION_STORAGE_KEY = 'wrdcld-session-v2';
 const PUBLIC_ROOM_ID = 'mardi-gras-public-session';
+const DEFAULT_QR_PATH = 'assets/qr-default.png';
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBoaFArhEidJBLEEUFGqe3a0X3jOc-7UZQ",
   authDomain: "webquiz-26c83.firebaseapp.com",
@@ -810,13 +811,29 @@ async function resetPresentationRoomForNewSession(){
   sharedState.set('current', 0);
   sharedState.set('qrCodeDataUrl', null);
 }
-function renderPresentationLobby(){
+async function loadDefaultQr(){
+  try{
+    const resp = await fetch(DEFAULT_QR_PATH);
+    if(!resp.ok) return '';
+    const blob = await resp.blob();
+    return await new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+      reader.readAsDataURL(blob);
+    });
+  } catch(e){ return ''; }
+}
+async function renderPresentationLobby(){
   stopLandingStatusWatch();
   setPresentationShell(true);
   phase = PHASE_LOBBY;
+  if(!qrCodeDataUrl){
+    const defaultUrl = await loadDefaultQr();
+    if(defaultUrl){ qrCodeDataUrl = defaultUrl; qrCodeFileName = 'default'; }
+  }
   const qrPreview = qrCodeDataUrl
-    ? `<div class="small" style="margin:10px 0;padding:8px 12px;background:#f0f0f0;border-radius:8px;border:1px solid #ddd">✓ QR code uploaded: <strong>${qrCodeFileName}</strong></div>`
-    : '<p class="small" style="margin-top:8px">Upload the session QR code to begin.</p>';
+    ? `<div style="margin:12px 0;text-align:center"><img src="${qrCodeDataUrl}" alt="Session QR code" style="max-width:180px;border-radius:8px;border:1px solid #ddd" /></div>`
+    : '<p class="small" style="margin-top:8px">No QR code found. Upload one to begin.</p>';
   const startGameButton = qrCodeDataUrl
     ? '<button onclick="startHostQuestions()">Start Game</button>'
     : '';
@@ -824,12 +841,14 @@ function renderPresentationLobby(){
     <div>
       <div class="presentation-panel" style="max-width:760px;margin:0 auto">
         <h3 style="margin-top:0">Presentation Lobby</h3>
-        <div class="small">Upload a QR code so participants can join, then start the game.</div>
-        <div style="margin-top:10px">
-          <input id="qrUploadIn" type="file" accept="image/*" />
-        </div>
         ${qrPreview}
-        <div class="controls" style="margin-top:8px">
+        <div style="margin-top:6px">
+          <label style="cursor:pointer;display:inline-block">
+            <span style="padding:6px 14px;border:1px solid #aaa;border-radius:6px;font-size:0.85rem;background:#f7f7f7">Replace QR Code</span>
+            <input id="qrUploadIn" type="file" accept="image/*" style="display:none" />
+          </label>
+        </div>
+        <div class="controls" style="margin-top:12px">
           <button class="secondary" onclick="renderLanding()">Exit</button>
           <button class="outline" onclick="forceResetAll()" style="color:#b71c1c;border-color:#b71c1c">Force Reset</button>
           ${startGameButton}

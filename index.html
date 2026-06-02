@@ -1187,7 +1187,6 @@ async function initRealtime(){
     sharedState.replaceResults({});
     sharedState.set('presentationName', nameVal);
     sharedState.set('presentationHeartbeat', Date.now());
-    sharedState.set('phase', PHASE_LOBBY);
     sharedState.set('ended', false);
     sharedState.set('current', 0);
     if(firebaseFns.onDisconnect){

@@ -685,9 +685,14 @@ function buildWordFrequency(qIndex){
 function renderWordCloudToCanvas(canvas, qIndex){
   if(!canvas || typeof WordCloud === 'undefined') return;
   const list = buildWordFrequency(qIndex);
+  if(!list.length){ const ctx=canvas.getContext('2d'); ctx.clearRect(0,0,canvas.width,canvas.height); return; }
+  // Resize buffer to match actual CSS display size so word scale is always proportional
+  const dw = canvas.offsetWidth || 500;
+  const dh = canvas.offsetHeight || Math.round(dw * 0.6);
+  canvas.width = dw;
+  canvas.height = dh;
   const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if(!list.length) return;
+  ctx.clearRect(0, 0, dw, dh);
   const maxFreq = list[0][1] || 1;
   const wcTopColors = ['#BE1E2D','#009FAF','#6DBE45','#10384F','#1D6FA4'];
   const wcColorMap = {};
@@ -697,7 +702,7 @@ function renderWordCloudToCanvas(canvas, qIndex){
     else if(i < 20) wcColorMap[item[0]] = '#3d3050';
     else wcColorMap[item[0]] = '#666677';
   });
-  const scale = canvas.width / 500;
+  const scale = dw / 500;
   WordCloud(canvas, {
     list,
     weightFactor: w => Math.max(18 * scale, Math.min(160 * scale, (w / maxFreq) * 140 * scale)),
@@ -744,14 +749,15 @@ function spawnReactionOverlay(emoji){
 function adjustWcSize(delta){
   wcSizeAdj = Math.max(-360, Math.min(480, wcSizeAdj + delta * 80));
   const canvas = document.getElementById('wordCloudCanvas');
-  if(canvas){ canvas.height = 720 + wcSizeAdj; }
+  if(canvas){
+    const baseH = Math.round((canvas.offsetWidth || 500) * 0.72);
+    canvas.style.height = Math.max(160, baseH + wcSizeAdj) + 'px';
+  }
   renderWordCloud(current);
 }
 function renderWordCloud(qIndex){
   const canvas = document.getElementById('wordCloudCanvas');
   if(!canvas) return;
-  canvas.width = 1000;
-  canvas.height = 720 + wcSizeAdj;
   const newFreq = buildWordFrequency(qIndex);
   const currentKeys = new Set(newFreq.map(([w]) => w));
   const newWords = newFreq.filter(([w]) => !prevWordKeys.has(w)).map(([w]) => w);
@@ -1627,6 +1633,13 @@ async function startQuiz(mode = 'participant'){
 }
 /* Cleanup tokens if tab/window is closed */
 window.addEventListener('beforeunload', () => { destroyRealtime(); });
+let _wcResizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_wcResizeTimer);
+  _wcResizeTimer = setTimeout(() => {
+    if(sessionMode === 'presentation' && current >= 0) renderWordCloud(current);
+  }, 150);
+});
 /* init */
 renderLanding(); updateHeader();
 if(restoreSessionState()){

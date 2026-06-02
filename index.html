@@ -84,9 +84,9 @@
   }
   @media (max-width:480px){.slide-banner{width:min(92vw,400px)}}
   @keyframes scroll-text { from{transform:translateX(100%)} to{transform:translateX(-100%)} }
-  .ticker-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; overflow:hidden; font-size:1.125rem }
-  .ticker-name { font-weight:700; min-width:100px; flex-shrink:0; font-size:1.125rem; white-space:nowrap }
-  .ticker-track { overflow:hidden; white-space:nowrap; flex:1; font-size:1.125rem }
+  .ticker-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; overflow:hidden; font-size:1.4rem }
+  .ticker-name { font-weight:700; min-width:110px; flex-shrink:0; font-size:1.4rem; white-space:nowrap }
+  .ticker-track { overflow:hidden; white-space:nowrap; flex:1; font-size:1.4rem }
   .ticker-text { display:inline-block; animation: scroll-text linear infinite }
   .wordcloud-wrap { position:relative; width:100%; display:flex; align-items:center; justify-content:center; margin-top:12px }
   @keyframes wc-word-arrive { 0%{opacity:0;transform:translate(-50%,-50%) scale(0.3)} 35%{opacity:1;transform:translate(-50%,-50%) scale(1.25)} 65%{opacity:1;transform:translate(-50%,-50%) scale(1)} 100%{opacity:0;transform:translate(-50%,-50%) scale(0.75) translateY(-28px)} }
@@ -135,7 +135,6 @@
     </div>
     <div class="body" id="screen"></div>
   </div>
-  <p class="small" style="margin-top:12px">Tip: Works great on phones. If anything looks cached, pull-to-refresh.</p>
 </div>
 
 <script>
@@ -934,6 +933,7 @@ function showQrOnly(){
     <div class="center">
       <h3 style="margin-top:0">Scan to Join</h3>
       <img src="${qrCodeDataUrl}" alt="Session QR code" style="max-width:min(100%,520px);border-radius:10px;border:1px solid #eadfbf" />
+      <p class="small" style="margin-top:10px;color:#555">Publicly hosted on GitHub — scan to join from your phone.</p>
       <div style="margin-top:12px">
         <label style="cursor:pointer;display:inline-block">
           <span style="padding:6px 14px;border:1px solid #aaa;border-radius:6px;font-size:0.85rem;background:#f7f7f7">Replace QR Code</span>
@@ -1012,7 +1012,7 @@ function renderPresentationView(index = 0, showFinal = false){
           <div class="small" style="margin-bottom:4px"><strong>${nameVal}</strong> &nbsp;•&nbsp; ${modeText()}</div>
           <div class="qtext" style="font-weight:600;margin-top:6px">${question.text}</div>
           ${waitingText}
-          <div class="wordcloud-wrap" style="max-width:75%;margin:0 auto"><canvas id="wordCloudCanvas" width="1000" height="720"></canvas></div>
+          <div class="wordcloud-wrap" style="max-width:70%;margin:0 auto"><canvas id="wordCloudCanvas" width="1000" height="720"></canvas></div>
           <div style="display:flex;align-items:center;gap:6px;margin-top:6px;justify-content:flex-end">
             <span class="small" style="color:#666">Cloud size</span>
             <button class="outline" style="padding:3px 13px;font-size:1.1rem;line-height:1" onclick="adjustWcSize(-1)">−</button>

@@ -113,6 +113,12 @@
   .top-word.rank-3{color:#b45309;background:rgba(180,83,9,.08)}
   @keyframes milestone-pop{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}75%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(.92) translateY(-20px)}}
   .milestone-banner{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10000;background:linear-gradient(135deg,#6b21a8,#9c27b0);color:#fff;font-size:2.8rem;font-weight:900;padding:22px 52px;border-radius:20px;text-align:center;pointer-events:none;animation:milestone-pop 3.4s ease-out forwards;box-shadow:0 12px 40px rgba(106,27,154,.55);white-space:nowrap}
+  .pin-modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px}
+  .pin-modal{background:#fff;border-radius:16px;padding:24px;max-width:380px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.35);border:1px solid #eadfbf}
+  .pin-modal h3{margin:0 0 16px;font-size:1.2rem;color:#5a0f7a}
+  .pin-modal input[type="password"]{width:100%;padding:14px;border-radius:12px;border:1px solid #ddd;font-size:1.1rem;letter-spacing:4px;text-align:center;box-sizing:border-box}
+  .pin-modal-buttons{display:flex;gap:10px;margin-top:16px}
+  .pin-modal-buttons button{flex:1}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/wordcloud@1.2.2/src/wordcloud2.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -1229,13 +1235,42 @@ function renderLanding(){
   startLandingStatusWatch();
   updateHeader();
 }
+function showPasswordPrompt(message = 'Enter PIN:'){
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'pin-modal-overlay';
+    overlay.innerHTML = `
+      <div class="pin-modal">
+        <h3>${message}</h3>
+        <input type="password" id="pinInput" maxlength="8" autocomplete="off" />
+        <div class="pin-modal-buttons">
+          <button class="secondary" id="pinCancel">Cancel</button>
+          <button id="pinOk">OK</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const input = document.getElementById('pinInput');
+    const okBtn = document.getElementById('pinOk');
+    const cancelBtn = document.getElementById('pinCancel');
+    const cleanup = (value) => {
+      document.body.removeChild(overlay);
+      resolve(value);
+    };
+    okBtn.onclick = () => cleanup(input.value);
+    cancelBtn.onclick = () => cleanup(null);
+    overlay.onclick = (e) => { if(e.target === overlay) cleanup(null); };
+    input.onkeydown = (e) => { if(e.key === 'Enter') cleanup(input.value); };
+    setTimeout(() => input.focus(), 100);
+  });
+}
 function presenterGate(){
-  const pin = prompt('Enter presenter PIN:');
-  if(pin === PRESENTER_PIN){
-    startQuiz('presentation');
-  } else if(pin !== null){
-    alert('Incorrect PIN.');
-  }
+  showPasswordPrompt('Enter presenter PIN:').then(pin => {
+    if(pin === PRESENTER_PIN){
+      startQuiz('presentation');
+    } else if(pin !== null){
+      alert('Incorrect PIN.');
+    }
+  });
 }
 function renderParticipantJoin(){
   stopLandingStatusWatch();

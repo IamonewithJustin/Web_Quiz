@@ -688,10 +688,18 @@ function renderWordCloudToCanvas(canvas, qIndex){
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if(!list.length) return;
   const maxFreq = list[0][1] || 1;
+  const wcTopColors = ['#BE1E2D','#009FAF','#6DBE45','#10384F','#1D6FA4'];
+  const wcColorMap = {};
+  list.forEach((item, i) => {
+    if(i < 5) wcColorMap[item[0]] = wcTopColors[i];
+    else if(i < 10) wcColorMap[item[0]] = '#1a1a2e';
+    else if(i < 20) wcColorMap[item[0]] = '#3d3050';
+    else wcColorMap[item[0]] = '#666677';
+  });
   WordCloud(canvas, {
     list,
     weightFactor: w => Math.max(14, Math.min(60, (w / maxFreq) * 60)),
-    color: (word, weight, fontSize) => { if(fontSize>=42)return'#111111'; if(fontSize>=34)return'#1a1a2e'; if(fontSize>=26)return'#3d2a5a'; if(fontSize>=19)return'#4a4060'; return'#6a6a7a'; },
+    color: word => wcColorMap[word] || '#555566',
     rotateRatio: 0,
     backgroundColor: '#fafafa',
     gridSize: 8,

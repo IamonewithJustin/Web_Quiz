@@ -84,9 +84,9 @@
   }
   @media (max-width:480px){.slide-banner{width:min(92vw,400px)}}
   @keyframes scroll-text { from{transform:translateX(100%)} to{transform:translateX(-100%)} }
-  .ticker-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; overflow:hidden }
-  .ticker-name { font-weight:700; min-width:80px; flex-shrink:0; font-size:.9rem; white-space:nowrap }
-  .ticker-track { overflow:hidden; white-space:nowrap; flex:1 }
+  .ticker-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; overflow:hidden; font-size:1.125rem }
+  .ticker-name { font-weight:700; min-width:100px; flex-shrink:0; font-size:1.125rem; white-space:nowrap }
+  .ticker-track { overflow:hidden; white-space:nowrap; flex:1; font-size:1.125rem }
   .ticker-text { display:inline-block; animation: scroll-text linear infinite }
   .wordcloud-wrap { position:relative; width:100%; display:flex; align-items:center; justify-content:center; margin-top:12px }
   @keyframes wc-word-arrive { 0%{opacity:0;transform:translate(-50%,-50%) scale(0.3)} 35%{opacity:1;transform:translate(-50%,-50%) scale(1.25)} 65%{opacity:1;transform:translate(-50%,-50%) scale(1)} 100%{opacity:0;transform:translate(-50%,-50%) scale(0.75) translateY(-28px)} }
@@ -1012,7 +1012,7 @@ function renderPresentationView(index = 0, showFinal = false){
           <div class="small" style="margin-bottom:4px"><strong>${nameVal}</strong> &nbsp;•&nbsp; ${modeText()}</div>
           <div class="qtext" style="font-weight:600;margin-top:6px">${question.text}</div>
           ${waitingText}
-          <div class="wordcloud-wrap"><canvas id="wordCloudCanvas" width="1000" height="720"></canvas></div>
+          <div class="wordcloud-wrap" style="max-width:75%;margin:0 auto"><canvas id="wordCloudCanvas" width="1000" height="720"></canvas></div>
           <div style="display:flex;align-items:center;gap:6px;margin-top:6px;justify-content:flex-end">
             <span class="small" style="color:#666">Cloud size</span>
             <button class="outline" style="padding:3px 13px;font-size:1.1rem;line-height:1" onclick="adjustWcSize(-1)">−</button>

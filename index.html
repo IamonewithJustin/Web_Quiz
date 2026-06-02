@@ -684,7 +684,9 @@ function buildWordFrequency(qIndex){
 function renderWordCloudToCanvas(canvas, qIndex){
   if(!canvas || typeof WordCloud === 'undefined') return;
   const list = buildWordFrequency(qIndex);
-  if(!list.length){ canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height); return; }
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if(!list.length) return;
   const maxFreq = list[0][1] || 1;
   WordCloud(canvas, {
     list,

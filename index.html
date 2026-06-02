@@ -187,6 +187,7 @@ let landingStatusTimer = null;
 const SESSION_STORAGE_KEY = 'wrdcld-session-v2';
 const PUBLIC_ROOM_ID = 'mardi-gras-public-session';
 const DEFAULT_QR_PATH = 'assets/qr-default.png';
+const PRESENTER_PIN = '2026';
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBoaFArhEidJBLEEUFGqe3a0X3jOc-7UZQ",
   authDomain: "webquiz-26c83.firebaseapp.com",
@@ -248,6 +249,11 @@ async function refreshLandingAvailability(){
   }
   landingPresentationActive = isActive;
   landingStatusKnown = true;
+  if(isActive && sessionMode !== 'presentation'){
+    stopLandingStatusWatch();
+    renderParticipantJoin();
+    return;
+  }
   const noteEl = document.getElementById('landingAvailNote');
   const btnEl  = document.getElementById('startPresentationBtn');
   if(noteEl){
@@ -1216,12 +1222,20 @@ function renderLanding(){
       <p id="landingAvailNote" class="small" style="display:none"></p>
       <div class="controls" style="margin-top:14px">
         <button class="secondary" onclick="renderAbout()">About</button>
-        <button id="startPresentationBtn" class="outline" onclick="startQuiz('presentation')">Start Presentation View</button>
+        <button id="startPresentationBtn" class="outline" onclick="presenterGate()">Start Presentation View</button>
         <button onclick="renderParticipantJoin()">Join as Participant</button>
       </div>
     </div>`;
   startLandingStatusWatch();
   updateHeader();
+}
+function presenterGate(){
+  const pin = prompt('Enter presenter PIN:');
+  if(pin === PRESENTER_PIN){
+    startQuiz('presentation');
+  } else if(pin !== null){
+    alert('Incorrect PIN.');
+  }
 }
 function renderParticipantJoin(){
   stopLandingStatusWatch();
